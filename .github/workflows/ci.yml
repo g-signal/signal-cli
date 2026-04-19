@@ -27,8 +27,6 @@ jobs:
           java-version: ${{ matrix.java }}
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          dependency-graph: generate-and-submit
       - name: Install asciidoc
         run: sudo apt update && sudo apt --no-install-recommends install -y asciidoc-base
       - name: Build with Gradle
@@ -60,6 +58,7 @@ jobs:
         with:
           java-version: '21'
           distribution: 'graalvm-community'
+          version: '21.0.2'
           cache: 'gradle'
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Build with Gradle
