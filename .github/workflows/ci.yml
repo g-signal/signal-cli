@@ -30,7 +30,9 @@ jobs:
       - name: Install asciidoc
         run: sudo apt update && sudo apt --no-install-recommends install -y asciidoc-base
       - name: Build with Gradle
-        run: ./gradlew --no-daemon build
+        run: |
+          export PATH="$JAVA_HOME/bin:$PATH"
+          ./gradlew --no-daemon build
       - name: Build man page
         run: |
           cd man
@@ -54,13 +56,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: graalvm/setup-graalvm@v1
+      - uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'graalvm-community'
-          version: '21.0.2'
-          cache: 'gradle'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Build with Gradle
         run: ./gradlew --no-daemon nativeCompile
       - name: Archive production artifacts
