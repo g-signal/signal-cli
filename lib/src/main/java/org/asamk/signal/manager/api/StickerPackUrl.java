@@ -48,7 +48,7 @@ public record StickerPackUrl(StickerPackId packId, byte[] packKey) {
     public URI getUrl() {
         try {
             return new URI("https",
-                    "signal.art",
+                    "sticker.baxs.com",
                     "/addstickers/",
                     "pack_id="
                             + URLEncoder.encode(Hex.toStringCondensed(packId.serialize()), StandardCharsets.UTF_8)
