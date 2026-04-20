@@ -1,4 +1,6 @@
 use std::{path::PathBuf, time::Duration};
+use qrcode::{QrCode, EcLevel};
+use qrcode::render::unicode;
 
 use clap::Parser;
 use jsonrpsee::core::client::{Error as RpcError, Subscription, SubscriptionClientT};
@@ -76,6 +78,7 @@ async fn handle_command(
                 .map_err(|e| RpcError::Custom(format!("JSON-RPC command startLink failed: {e:?}")))?
                 .device_link_uri;
             println!("{url}");
+            print_qr(&url);
             client.finish_link(url, name).await
         }
         CliCommands::ListAccounts => client.list_accounts().await,
@@ -508,6 +511,16 @@ async fn connect(cli: Cli) -> Result<Value, RpcError> {
 
             handle_command(cli, client).await
         }
+    }
+}
+
+fn print_qr(url: &str) {
+    if let Ok(code) = QrCode::with_error_correction_level(url, EcLevel::L) {
+        let image = code.render::<unicode::Dense1x2>()
+            .dark_color(unicode::Dense1x2::Light)
+            .light_color(unicode::Dense1x2::Dark)
+            .build();
+        println!("{image}");
     }
 }
 
