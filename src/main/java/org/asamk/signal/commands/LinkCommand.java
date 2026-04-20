@@ -21,6 +21,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
@@ -56,7 +58,7 @@ public class LinkCommand implements ProvisioningCommand {
             final URI uri = m.getDeviceLinkUri();
             writer.println("{}", uri);
             try {
-                printQrCode(uri);
+                printQrCode(writer, uri);
             } catch (WriterException e) {
                 logger.debug("Failed to generate QR code: {}", e.getMessage());
             }
@@ -75,12 +77,13 @@ public class LinkCommand implements ProvisioningCommand {
         }
     }
 
-    public static void main(String[] args) throws WriterException {
+    public static void main(String[] args) throws WriterException, IOException {
         final String testUri = "baxs://linkdevice?uuid=test-device-uuid&pub_key=dGVzdHB1YmxpY2tleQ==";
-        printQrCode(URI.create(testUri));
+        final PlainTextWriter writer = new org.asamk.signal.output.PlainTextWriterImpl(new OutputStreamWriter(System.out));
+        printQrCode(writer, URI.create(testUri));
     }
 
-    private static void printQrCode(final URI uri) throws WriterException {
+    private static void printQrCode(PlainTextWriter writer, final URI uri) throws WriterException, IOException {
         final Map<EncodeHintType, Object> hints = Map.of(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.L,
                 EncodeHintType.MARGIN, 2);
         final BitMatrix matrix = new QRCodeWriter().encode(uri.toString(), BarcodeFormat.QR_CODE, 0, 0, hints);
@@ -107,6 +110,6 @@ public class LinkCommand implements ProvisioningCommand {
             }
             sb.append(reset).append('\n');
         }
-        System.out.print(sb);
+        writer.println("{}", sb.toString());
     }
 }
