@@ -1,5 +1,12 @@
 package org.asamk.signal.commands;
 
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
+
 import net.sourceforge.argparse4j.inf.Namespace;
 import net.sourceforge.argparse4j.inf.Subparser;
 
@@ -14,6 +21,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.URI;
+import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
 public class LinkCommand implements ProvisioningCommand {
@@ -37,15 +46,21 @@ public class LinkCommand implements ProvisioningCommand {
             final ProvisioningManager m,
             final OutputWriter outputWriter
     ) throws CommandException {
-        final var writer = (PlainTextWriter) outputWriter;
+        final PlainTextWriter writer = (PlainTextWriter) outputWriter;
 
-        var deviceName = ns.getString("name");
+        String deviceName = ns.getString("name");
         if (deviceName == null) {
             deviceName = "cli";
         }
         try {
-            writer.println("{}", m.getDeviceLinkUri());
-            var number = m.finishDeviceLink(deviceName);
+            final URI uri = m.getDeviceLinkUri();
+            writer.println("{}", uri);
+            try {
+                printQrCode(uri);
+            } catch (WriterException e) {
+                logger.debug("Failed to generate QR code: {}", e.getMessage());
+            }
+            final String number = m.finishDeviceLink(deviceName);
             writer.println("Associated with: {}", number);
         } catch (TimeoutException e) {
             throw new UserErrorException("Link request timed out, please try again.");
@@ -58,5 +73,40 @@ public class LinkCommand implements ProvisioningCommand {
                     + e.getFileName()
                     + "\" before trying again.");
         }
+    }
+
+    public static void main(String[] args) throws WriterException {
+        final String testUri = "baxs://linkdevice?uuid=test-device-uuid&pub_key=dGVzdHB1YmxpY2tleQ==";
+        printQrCode(URI.create(testUri));
+    }
+
+    private static void printQrCode(final URI uri) throws WriterException {
+        final Map<EncodeHintType, Object> hints = Map.of(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.L,
+                EncodeHintType.MARGIN, 2);
+        final BitMatrix matrix = new QRCodeWriter().encode(uri.toString(), BarcodeFormat.QR_CODE, 0, 0, hints);
+        final StringBuilder sb = new StringBuilder();
+        final boolean ansi = System.console() != null;
+        final String white = ansi ? "\033[107;30m" : "";
+        final String reset = ansi ? "\033[0m" : "";
+        for (int y = 0; y < matrix.getHeight(); y += 2) {
+            sb.append(white);
+            for (int x = 0; x < matrix.getWidth(); x++) {
+                final boolean top = matrix.get(x, y);
+                final boolean bottom = (y + 1 < matrix.getHeight()) && matrix.get(x, y + 1);
+                final char ch;
+                if (top && bottom) {
+                    ch = '█';
+                } else if (top) {
+                    ch = '▀';
+                } else if (bottom) {
+                    ch = '▄';
+                } else {
+                    ch = ' ';
+                }
+                sb.append(ch);
+            }
+            sb.append(reset).append('\n');
+        }
+        System.out.print(sb);
     }
 }
