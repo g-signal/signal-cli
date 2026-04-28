@@ -2,12 +2,12 @@ package org.asamk.signal.manager.storage.senderKeys;
 
 import org.asamk.signal.manager.storage.Database;
 import org.asamk.signal.manager.storage.Utils;
+import org.signal.core.models.ServiceId;
+import org.signal.core.util.UuidUtil;
 import org.signal.libsignal.protocol.SignalProtocolAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.whispersystems.signalservice.api.push.DistributionId;
-import org.whispersystems.signalservice.api.push.ServiceId;
-import org.whispersystems.signalservice.api.util.UuidUtil;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -197,8 +197,9 @@ public class SenderKeySharedStore {
     ) throws SQLException {
         final var sql = (
                 """
-                INSERT OR REPLACE INTO %s (address, device_id, distribution_id, timestamp)
+                INSERT INTO %s (address, device_id, distribution_id, timestamp)
                 VALUES (?, ?, ?, ?)
+                ON CONFLICT (address, device_id, distribution_id) DO UPDATE SET timestamp=excluded.timestamp
                 """
         ).formatted(TABLE_SENDER_KEY_SHARED);
         try (final var statement = connection.prepareStatement(sql)) {

@@ -1,9 +1,9 @@
 package org.asamk.signal.manager.helper;
 
 import org.asamk.signal.manager.api.IncorrectPinException;
+import org.signal.core.models.MasterKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.whispersystems.signalservice.api.kbs.MasterKey;
 import org.whispersystems.signalservice.api.svr.SecureValueRecovery;
 import org.whispersystems.signalservice.internal.push.AuthCredentials;
 import org.whispersystems.signalservice.internal.push.LockedException;
@@ -23,11 +23,14 @@ public class PinHelper {
 
     public void setRegistrationLockPin(String pin, MasterKey masterKey) throws IOException {
         IOException exception = null;
+        var setPinSuccessfully = false;
         for (final var secureValueRecovery : secureValueRecoveries) {
             try {
                 final var backupResponse = secureValueRecovery.setPin(pin, masterKey).execute();
                 switch (backupResponse) {
                     case SecureValueRecovery.BackupResponse.Success success -> {
+                        setPinSuccessfully = true;
+                        logger.trace("PIN set successfully");
                     }
                     case SecureValueRecovery.BackupResponse.ServerRejected serverRejected ->
                             logger.warn("Backup svr failed: ServerRejected");
@@ -44,7 +47,7 @@ public class PinHelper {
                 exception = e;
             }
         }
-        if (exception != null) {
+        if (!setPinSuccessfully && exception != null) {
             throw exception;
         }
     }
@@ -55,11 +58,13 @@ public class PinHelper {
 
     public void removeRegistrationLockPin() throws IOException {
         IOException exception = null;
+        var removedPinSuccessfully = false;
         for (final var secureValueRecovery : secureValueRecoveries) {
             try {
                 final var deleteResponse = secureValueRecovery.deleteData();
                 switch (deleteResponse) {
                     case SecureValueRecovery.DeleteResponse.Success success -> {
+                        removedPinSuccessfully = true;
                     }
                     case SecureValueRecovery.DeleteResponse.ServerRejected serverRejected ->
                             logger.warn("Delete svr2 failed: ServerRejected");
@@ -74,7 +79,7 @@ public class PinHelper {
                 exception = e;
             }
         }
-        if (exception != null) {
+        if (!removedPinSuccessfully && exception != null) {
             throw exception;
         }
     }

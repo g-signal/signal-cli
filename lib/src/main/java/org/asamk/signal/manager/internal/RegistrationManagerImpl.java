@@ -33,14 +33,14 @@ import org.asamk.signal.manager.helper.PinHelper;
 import org.asamk.signal.manager.storage.SignalAccount;
 import org.asamk.signal.manager.util.KeyUtils;
 import org.asamk.signal.manager.util.NumberVerificationUtils;
+import org.signal.core.models.MasterKey;
+import org.signal.core.models.ServiceId.ACI;
+import org.signal.core.models.ServiceId.PNI;
 import org.signal.libsignal.usernames.BaseUsernameException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.account.PreKeyCollection;
-import org.whispersystems.signalservice.api.kbs.MasterKey;
-import org.whispersystems.signalservice.api.push.ServiceId.ACI;
-import org.whispersystems.signalservice.api.push.ServiceId.PNI;
 import org.whispersystems.signalservice.api.push.ServiceIdType;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.AlreadyVerifiedException;
@@ -161,7 +161,11 @@ public class RegistrationManagerImpl implements RegistrationManager {
 
         final var aciPreKeys = generatePreKeysForType(account.getAccountData(ServiceIdType.ACI));
         final var pniPreKeys = generatePreKeysForType(account.getAccountData(ServiceIdType.PNI));
-        final var result = NumberVerificationUtils.verifyNumber(account.getSessionId(account.getNumber()),
+        final var sessionId = account.getSessionId(account.getNumber());
+        if (sessionId == null) {
+            throw new IOException("No registration verification session active");
+        }
+        final var result = NumberVerificationUtils.verifyNumber(sessionId,
                 verificationCode,
                 pin,
                 pinHelper,

@@ -10,14 +10,14 @@ import org.asamk.signal.manager.storage.Utils;
 import org.asamk.signal.manager.storage.contacts.ContactsStore;
 import org.asamk.signal.manager.storage.profiles.ProfileStore;
 import org.asamk.signal.manager.util.KeyUtils;
+import org.signal.core.models.ServiceId;
+import org.signal.core.models.ServiceId.ACI;
+import org.signal.core.models.ServiceId.PNI;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.whispersystems.signalservice.api.push.ServiceId;
-import org.whispersystems.signalservice.api.push.ServiceId.ACI;
-import org.whispersystems.signalservice.api.push.ServiceId.PNI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.storage.StorageId;
 
@@ -841,7 +841,7 @@ public class RecipientStore implements RecipientIdCreator, RecipientResolver, Re
         final var sql = (
                 """
                 UPDATE %s
-                SET given_name = ?, family_name = ?, nick_name = ?, expiration_time = ?, expiration_time_version = ?, mute_until = ?, hide_story = ?, profile_sharing = ?, color = ?, blocked = ?, archived = ?, unregistered_timestamp = ?, nick_name_given_name = ?, nick_name_family_name = ?, note = ?
+                SET given_name = ?, family_name = ?, nick_name = ?, expiration_time = ?, expiration_time_version = ?, mute_until = ?, hide_story = ?, profile_sharing = ?, color = ?, blocked = ?, archived = ?, unregistered_timestamp = ?, nick_name_given_name = ?, nick_name_family_name = ?, note = ?, hidden = ?
                 WHERE _id = ?
                 """
         ).formatted(TABLE_RECIPIENT);
@@ -865,7 +865,8 @@ public class RecipientStore implements RecipientIdCreator, RecipientResolver, Re
             statement.setString(13, contact == null ? null : contact.nickNameGivenName());
             statement.setString(14, contact == null ? null : contact.nickNameFamilyName());
             statement.setString(15, contact == null ? null : contact.note());
-            statement.setLong(16, recipientId.id());
+            statement.setBoolean(16, contact != null && contact.isHidden());
+            statement.setLong(17, recipientId.id());
             statement.executeUpdate();
         }
         if (contact != null && contact.unregisteredTimestamp() != null) {

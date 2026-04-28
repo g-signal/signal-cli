@@ -28,7 +28,6 @@ class StagingConfig {
     private static final byte[] UNIDENTIFIED_SENDER_TRUST_ROOT = Base64.getDecoder()
             .decode("Bd8hujwt+PY1jMqO5xC/8pmIuxwzwuX7ZjHKoJ2BVL4g");
     private static final String CDSI_MRENCLAVE = "3ded708ca5a42fd84b4639dc661a7ec4b9c9f1b92809c0fc91da2349a5a89d05";
-    private static final String SVR2_MRENCLAVE_LEGACY = "b49a2d7aa6a92623713541be3342cc2432cbb4052a9ab83b50aef3375651e68f";
     private static final String SVR2_MRENCLAVE = "b49a2d7aa6a92623713541be3342cc2432cbb4052a9ab83b50aef3375651e68f";
 
     private static final String URL = "https://chat.ba-chat.com";
@@ -77,9 +76,9 @@ class StagingConfig {
                 false);
     }
 
-    static ECPublicKey getUnidentifiedSenderTrustRoot() {
+    static List<ECPublicKey> getUnidentifiedSenderTrustRoots() {
         try {
-            return new ECPublicKey(UNIDENTIFIED_SENDER_TRUST_ROOT);
+            return List.of(new ECPublicKey(UNIDENTIFIED_SENDER_TRUST_ROOT));
         } catch (InvalidKeyException e) {
             throw new AssertionError(e);
         }
@@ -89,9 +88,9 @@ class StagingConfig {
         return new ServiceEnvironmentConfig(STAGING,
                 LIBSIGNAL_NET_ENV,
                 createDefaultServiceConfiguration(interceptors),
-                getUnidentifiedSenderTrustRoot(),
+                getUnidentifiedSenderTrustRoots(),
                 CDSI_MRENCLAVE,
-                List.of(SVR2_MRENCLAVE, SVR2_MRENCLAVE_LEGACY));
+                List.of(SVR2_MRENCLAVE));
     }
 
     private StagingConfig() {

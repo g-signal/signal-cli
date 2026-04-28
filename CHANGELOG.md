@@ -1,5 +1,71 @@
 # Changelog
 
+## [0.13.23] - 2026-01-24
+
+Requires libsignal-client version 0.86.12.
+
+### Added
+
+- Add sendPollCreate, sendPollVote, sendPollTerminate commands for polls
+- Add updateDevice command to set device name of linked devices
+
+### Changed
+
+- Allow updating contact names from linked devices
+
+### Fixed
+
+- Start multi account mode even if some accounts have authorization failures
+
+## [0.13.22] - 2025-11-14
+
+Requires libsignal-client version 0.86.1.
+
+### Fixed
+
+- Fix timeout handling for receive command
+- Fix device link URI parsing for unencoded trailing =
+- Adapt setPin command to server changes
+
+## [0.13.21] - 2025-10-25
+
+Requires libsignal-client version 0.84.0.
+
+### Changed
+
+- Add isExpirationUpdate to json message output
+- Improve error message when using verify without registering before
+
+## [0.13.20] - 2025-09-23
+
+Requires libsignal-client version 0.81.0.
+
+### Fixed
+
+- Fix sending group message to legacy targets without group send endorsements
+- Fix registration commands in daemon mode for already registered accounts (Thanks @AntonKun)
+
+### Improved
+
+- Faster shutdown performance when using multiple accounts
+
+## [0.13.19] - 2025-09-15
+
+Requires libsignal-client version 0.80.2.
+
+### Fixed
+
+- Fixed hiding contacts (with `removeContact --hide`)
+- Prevent splitting UTF-8 chars when reading message from stdin
+- Handle unregistered username correctly when sending message
+
+### Changed
+
+- Update to signal service changes, mainly new group endorsements for group sending
+- Reduced frequency of updating last received timstamp on disk
+- Handle missing storage manifest version correctly
+- Force a group refresh when using listGroups command with groupId
+
 ## [0.13.18] - 2025-07-16
 
 Requires libsignal-client version 0.76.3.

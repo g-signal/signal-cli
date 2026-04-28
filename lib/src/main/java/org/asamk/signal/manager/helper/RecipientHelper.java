@@ -6,14 +6,14 @@ import org.asamk.signal.manager.api.UsernameLinkUrl;
 import org.asamk.signal.manager.internal.SignalDependencies;
 import org.asamk.signal.manager.storage.SignalAccount;
 import org.asamk.signal.manager.storage.recipients.RecipientId;
+import org.signal.core.models.ServiceId;
+import org.signal.core.models.ServiceId.ACI;
+import org.signal.core.models.ServiceId.PNI;
 import org.signal.libsignal.usernames.BaseUsernameException;
 import org.signal.libsignal.usernames.Username;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.whispersystems.signalservice.api.cds.CdsiV2Service;
-import org.whispersystems.signalservice.api.push.ServiceId;
-import org.whispersystems.signalservice.api.push.ServiceId.ACI;
-import org.whispersystems.signalservice.api.push.ServiceId.PNI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.CdsiInvalidArgumentException;
 import org.whispersystems.signalservice.api.push.exceptions.CdsiInvalidTokenException;
@@ -95,7 +95,10 @@ public class RecipientHelper {
             try {
                 return resolveRecipientByUsernameOrLink(username, false);
             } catch (Exception e) {
-                return null;
+                throw new UnregisteredRecipientException(new org.asamk.signal.manager.api.RecipientAddress(null,
+                        null,
+                        null,
+                        username));
             }
         }
         throw new AssertionError("Unexpected RecipientIdentifier: " + recipient);
@@ -113,7 +116,8 @@ public class RecipientHelper {
         }
         if (forceRefresh) {
             try {
-                final var aci = handleResponseException(dependencies.getUsernameApi().getAciByUsername(finalUsername));
+                @SuppressWarnings("unchecked") final var aci = (ACI) handleResponseException(dependencies.getUsernameApi()
+                        .getAciByUsername(finalUsername));
                 return account.getRecipientStore().resolveRecipientTrusted(aci, finalUsername.getUsername());
             } catch (NonSuccessfulResponseCodeException e) {
                 if (e.code == 404) {
@@ -128,7 +132,9 @@ public class RecipientHelper {
         }
         return account.getRecipientStore().resolveRecipientByUsername(finalUsername.getUsername(), () -> {
             try {
-                return handleResponseException(dependencies.getUsernameApi().getAciByUsername(finalUsername));
+                @SuppressWarnings("unchecked") final var result = (ACI) handleResponseException(dependencies.getUsernameApi()
+                        .getAciByUsername(finalUsername));
+                return result;
             } catch (Exception e) {
                 return null;
             }

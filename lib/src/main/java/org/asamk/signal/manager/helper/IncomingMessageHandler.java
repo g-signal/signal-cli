@@ -5,6 +5,7 @@ import org.asamk.signal.manager.actions.HandleAction;
 import org.asamk.signal.manager.actions.RefreshPreKeysAction;
 import org.asamk.signal.manager.actions.RenewSessionAction;
 import org.asamk.signal.manager.actions.ResendMessageAction;
+import org.asamk.signal.manager.actions.RetrieveDeviceNameAction;
 import org.asamk.signal.manager.actions.RetrieveProfileAction;
 import org.asamk.signal.manager.actions.SendGroupInfoAction;
 import org.asamk.signal.manager.actions.SendGroupInfoRequestAction;
@@ -34,6 +35,8 @@ import org.asamk.signal.manager.storage.groups.GroupInfoV1;
 import org.asamk.signal.manager.storage.recipients.RecipientAddress;
 import org.asamk.signal.manager.storage.recipients.RecipientId;
 import org.asamk.signal.manager.storage.stickers.StickerPack;
+import org.signal.core.models.ServiceId;
+import org.signal.core.models.ServiceId.ACI;
 import org.signal.libsignal.metadata.ProtocolInvalidKeyException;
 import org.signal.libsignal.metadata.ProtocolInvalidKeyIdException;
 import org.signal.libsignal.metadata.ProtocolInvalidMessageException;
@@ -41,7 +44,6 @@ import org.signal.libsignal.metadata.ProtocolNoSessionException;
 import org.signal.libsignal.metadata.ProtocolUntrustedIdentityException;
 import org.signal.libsignal.metadata.SelfSendException;
 import org.signal.libsignal.protocol.InvalidMessageException;
-import org.signal.libsignal.protocol.UsePqRatchet;
 import org.signal.libsignal.protocol.groups.GroupSessionBuilder;
 import org.signal.libsignal.protocol.message.DecryptionErrorMessage;
 import org.signal.libsignal.zkgroup.InvalidInputException;
@@ -63,8 +65,6 @@ import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage
 import org.whispersystems.signalservice.api.messages.SignalServiceStoryMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.StickerPackOperationMessage;
-import org.whispersystems.signalservice.api.push.ServiceId;
-import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.ServiceIdType;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.internal.push.Envelope;
@@ -106,7 +106,7 @@ public final class IncomingMessageHandler {
             try {
                 final var cipherResult = dependencies.getCipher(destination == null
                                 || destination.equals(account.getAci()) ? ServiceIdType.ACI : ServiceIdType.PNI)
-                        .decrypt(envelope.getProto(), envelope.getServerDeliveredTimestamp(), UsePqRatchet.NO);
+                        .decrypt(envelope.getProto(), envelope.getServerDeliveredTimestamp());
                 content = validate(envelope.getProto(), cipherResult, envelope.getServerDeliveredTimestamp());
                 if (content == null) {
                     return new Pair<>(List.of(), null);
@@ -144,7 +144,7 @@ public final class IncomingMessageHandler {
             try {
                 final var cipherResult = dependencies.getCipher(destination == null
                                 || destination.equals(account.getAci()) ? ServiceIdType.ACI : ServiceIdType.PNI)
-                        .decrypt(envelope.getProto(), envelope.getServerDeliveredTimestamp(), UsePqRatchet.NO);
+                        .decrypt(envelope.getProto(), envelope.getServerDeliveredTimestamp());
                 content = validate(envelope.getProto(), cipherResult, envelope.getServerDeliveredTimestamp());
                 if (content == null) {
                     return new Pair<>(List.of(), null);
@@ -632,6 +632,12 @@ public final class IncomingMessageHandler {
             if (updatedPniString != null && !updatedPniString.isEmpty()) {
                 final var updatedPni = ServiceId.PNI.parseOrThrow(updatedPniString);
                 context.getAccountHelper().handlePniChangeNumberMessage(pniChangeNumber, updatedPni);
+            }
+        }
+        if (syncMessage.getDeviceNameChange().isPresent()) {
+            final var deviceNameChange = syncMessage.getDeviceNameChange().get();
+            if (deviceNameChange.deviceId != null && deviceNameChange.deviceId == account.getDeviceId()) {
+                actions.add(RetrieveDeviceNameAction.create());
             }
         }
         return actions;

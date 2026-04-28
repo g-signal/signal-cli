@@ -309,6 +309,7 @@ public class DbusSignalImpl implements Signal, AutoCloseable {
                     getSingleRecipientIdentifiers(recipients, m.getSelfNumber()).stream()
                             .map(RecipientIdentifier.class::cast)
                             .collect(Collectors.toSet()),
+                    false,
                     false);
             checkSendMessageResults(results);
             return results.timestamp();
@@ -511,6 +512,7 @@ public class DbusSignalImpl implements Signal, AutoCloseable {
                     getSingleRecipientIdentifier(targetAuthor, m.getSelfNumber()),
                     targetSentTimestamp,
                     Set.of(getGroupRecipientIdentifier(groupId)),
+                    false,
                     false);
             checkSendMessageResults(results);
             return results.timestamp();
@@ -535,8 +537,6 @@ public class DbusSignalImpl implements Signal, AutoCloseable {
     public void setContactName(final String number, final String name) {
         try {
             m.setContactName(getSingleRecipientIdentifier(number, m.getSelfNumber()), name, "", null, null, null);
-        } catch (NotPrimaryDeviceException e) {
-            throw new Error.Failure("This command doesn't work on linked devices.");
         } catch (UnregisteredRecipientException e) {
             throw new Error.UntrustedIdentity(e.getSender().getIdentifier() + " is not registered.");
         }

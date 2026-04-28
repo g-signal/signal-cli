@@ -7,7 +7,6 @@ import org.asamk.signal.commands.exceptions.CommandException;
 import org.asamk.signal.commands.exceptions.IOErrorException;
 import org.asamk.signal.commands.exceptions.UserErrorException;
 import org.asamk.signal.manager.Manager;
-import org.asamk.signal.manager.api.NotPrimaryDeviceException;
 import org.asamk.signal.manager.api.UnregisteredRecipientException;
 import org.asamk.signal.output.OutputWriter;
 import org.asamk.signal.util.CommandUtil;
@@ -60,17 +59,9 @@ public class UpdateContactCommand implements JsonRpcLocalCommand {
             var nickGivenName = ns.getString("nick-given-name");
             var nickFamilyName = ns.getString("nick-family-name");
             var note = ns.getString("note");
-            if (givenName != null
-                    || familyName != null
-                    || nickGivenName != null
-                    || nickFamilyName != null
-                    || note != null) {
-                m.setContactName(recipient, givenName, familyName, nickGivenName, nickFamilyName, note);
-            }
+            m.setContactName(recipient, givenName, familyName, nickGivenName, nickFamilyName, note);
         } catch (IOException e) {
             throw new IOErrorException("Update contact error: " + e.getMessage(), e);
-        } catch (NotPrimaryDeviceException e) {
-            throw new UserErrorException("This command doesn't work on linked devices.");
         } catch (UnregisteredRecipientException e) {
             throw new UserErrorException("The user " + e.getSender().getIdentifier() + " is not registered.");
         }

@@ -3,6 +3,7 @@ package org.asamk.signal.manager.api;
 import org.asamk.signal.manager.groups.GroupUtils;
 import org.asamk.signal.manager.helper.RecipientAddressResolver;
 import org.asamk.signal.manager.storage.recipients.RecipientResolver;
+import org.signal.core.models.ServiceId;
 import org.signal.libsignal.metadata.ProtocolException;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
@@ -32,7 +33,6 @@ import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptM
 import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.ViewOnceOpenMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.ViewedMessage;
-import org.whispersystems.signalservice.api.push.ServiceId;
 
 import java.io.File;
 import java.io.IOException;
@@ -115,6 +115,9 @@ public record MessageEnvelope(
             Optional<Long> remoteDeleteId,
             Optional<Sticker> sticker,
             List<SharedContact> sharedContacts,
+            Optional<PollCreate> pollCreate,
+            Optional<PollVote> pollVote,
+            Optional<PollTerminate> pollTerminate,
             List<Mention> mentions,
             List<Preview> previews,
             List<TextStyle> textStyles
@@ -155,6 +158,9 @@ public record MessageEnvelope(
                                     .map(sharedContact -> SharedContact.from(sharedContact, fileProvider))
                                     .toList())
                             .orElse(List.of()),
+                    dataMessage.getPollCreate().map(PollCreate::from),
+                    dataMessage.getPollVote().map(p -> PollVote.from(p, recipientResolver, addressResolver)),
+                    dataMessage.getPollTerminate().map(PollTerminate::from),
                     dataMessage.getMentions()
                             .map(a -> a.stream().map(m -> Mention.from(m, recipientResolver, addressResolver)).toList())
                             .orElse(List.of()),
@@ -509,6 +515,44 @@ public record MessageEnvelope(
             }
         }
 
+        public record PollCreate(
+                String question, boolean allowMultiple, List<String> options
+        ) {
+
+            static PollCreate from(
+                    SignalServiceDataMessage.PollCreate pollCreate
+            ) {
+                return new PollCreate(pollCreate.getQuestion(), pollCreate.getAllowMultiple(), pollCreate.getOptions());
+            }
+
+        }
+
+        public record PollVote(
+                RecipientAddress targetAuthor, long targetSentTimestamp, List<Integer> optionIndexes, int voteCount
+        ) {
+
+            static PollVote from(
+                    SignalServiceDataMessage.PollVote pollVote,
+                    RecipientResolver recipientResolver,
+                    RecipientAddressResolver addressResolver
+            ) {
+                return new PollVote(addressResolver.resolveRecipientAddress(recipientResolver.resolveRecipient(pollVote.getTargetAuthor()))
+                        .toApiRecipientAddress(),
+                        pollVote.getTargetSentTimestamp(),
+                        pollVote.getOptionIndexes(),
+                        pollVote.getVoteCount());
+            }
+
+        }
+
+        public record PollTerminate(long targetSentTimestamp) {
+
+            static PollTerminate from(SignalServiceDataMessage.PollTerminate pollTerminate) {
+                return new PollTerminate(pollTerminate.getTargetSentTimestamp());
+            }
+
+        }
+
         public record Preview(String title, String description, long date, String url, Optional<Attachment> image) {
 
             static Preview from(SignalServicePreview preview, final AttachmentFileProvider fileProvider) {
@@ -627,7 +671,7 @@ public record MessageEnvelope(
                     RecipientResolver recipientResolver,
                     RecipientAddressResolver addressResolver
             ) {
-                return new Read(addressResolver.resolveRecipientAddress(recipientResolver.resolveRecipient(readMessage.getSender()))
+                return new Read(addressResolver.resolveRecipientAddress(recipientResolver.resolveRecipient(readMessage.getSenderAci()))
                         .toApiRecipientAddress(), readMessage.getTimestamp());
             }
         }

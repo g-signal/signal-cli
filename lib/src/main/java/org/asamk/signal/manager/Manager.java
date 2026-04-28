@@ -154,6 +154,8 @@ public interface Manager extends Closeable {
 
     List<Device> getLinkedDevices() throws IOException;
 
+    void updateLinkedDevice(int deviceId, String name) throws IOException, NotPrimaryDeviceException;
+
     void removeLinkedDevices(int deviceId) throws IOException, NotPrimaryDeviceException;
 
     void addDeviceLink(DeviceLinkUrl linkUri) throws IOException, InvalidDeviceLinkException, NotPrimaryDeviceException, DeviceLimitExceededException;
@@ -161,6 +163,8 @@ public interface Manager extends Closeable {
     void setRegistrationLockPin(Optional<String> pin) throws IOException, NotPrimaryDeviceException;
 
     List<Group> getGroups();
+
+    List<Group> getGroups(Collection<GroupId> groupIds);
 
     SendGroupMessageResults quitGroup(
             GroupId groupId,
@@ -216,6 +220,7 @@ public interface Manager extends Closeable {
             RecipientIdentifier.Single targetAuthor,
             long targetSentTimestamp,
             Set<RecipientIdentifier> recipients,
+            final boolean notifySelf,
             final boolean isStory
     ) throws IOException, NotAGroupMemberException, GroupNotFoundException, GroupSendingNotAllowedException, UnregisteredRecipientException;
 
@@ -232,6 +237,29 @@ public interface Manager extends Closeable {
             Set<RecipientIdentifier> recipientIdentifiers
     );
 
+    SendMessageResults sendPollCreateMessage(
+            final String question,
+            final boolean allowMultiple,
+            final List<String> options,
+            final Set<RecipientIdentifier> recipients,
+            final boolean notifySelf
+    ) throws IOException, NotAGroupMemberException, GroupNotFoundException, GroupSendingNotAllowedException, UnregisteredRecipientException;
+
+    SendMessageResults sendPollVoteMessage(
+            final RecipientIdentifier.Single targetAuthor,
+            final long targetSentTimestamp,
+            final List<Integer> optionIndexes,
+            final int voteCount,
+            final Set<RecipientIdentifier> recipients,
+            final boolean notifySelf
+    ) throws IOException, NotAGroupMemberException, GroupNotFoundException, GroupSendingNotAllowedException, UnregisteredRecipientException;
+
+    SendMessageResults sendPollTerminateMessage(
+            final long targetSentTimestamp,
+            final Set<RecipientIdentifier> recipients,
+            final boolean notifySelf
+    ) throws IOException, NotAGroupMemberException, GroupNotFoundException, GroupSendingNotAllowedException, UnregisteredRecipientException;
+
     void hideRecipient(RecipientIdentifier.Single recipient);
 
     void deleteRecipient(RecipientIdentifier.Single recipient);
@@ -245,7 +273,7 @@ public interface Manager extends Closeable {
             final String nickGivenName,
             final String nickFamilyName,
             final String note
-    ) throws NotPrimaryDeviceException, UnregisteredRecipientException;
+    ) throws UnregisteredRecipientException;
 
     void setContactsBlocked(
             Collection<RecipientIdentifier.Single> recipient,

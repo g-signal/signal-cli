@@ -1,5 +1,6 @@
 package org.asamk.signal.manager.syncStorage;
 
+import org.asamk.signal.manager.api.Contact;
 import org.asamk.signal.manager.api.PhoneNumberSharingMode;
 import org.asamk.signal.manager.api.TrustLevel;
 import org.asamk.signal.manager.storage.configuration.ConfigurationStore;
@@ -7,14 +8,14 @@ import org.asamk.signal.manager.storage.groups.GroupInfoV1;
 import org.asamk.signal.manager.storage.groups.GroupInfoV2;
 import org.asamk.signal.manager.storage.identities.IdentityInfo;
 import org.asamk.signal.manager.storage.recipients.Recipient;
-import org.whispersystems.signalservice.api.push.ServiceId.ACI;
-import org.whispersystems.signalservice.api.push.ServiceId.PNI;
+import org.signal.core.models.ServiceId.ACI;
+import org.signal.core.models.ServiceId.PNI;
+import org.signal.core.util.UuidUtil;
 import org.whispersystems.signalservice.api.push.UsernameLinkComponents;
 import org.whispersystems.signalservice.api.storage.SignalAccountRecord;
 import org.whispersystems.signalservice.api.storage.SignalContactRecord;
 import org.whispersystems.signalservice.api.storage.SignalGroupV1Record;
 import org.whispersystems.signalservice.api.storage.SignalGroupV2Record;
-import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.signalservice.internal.storage.protos.AccountRecord;
 import org.whispersystems.signalservice.internal.storage.protos.AccountRecord.UsernameLink;
 import org.whispersystems.signalservice.internal.storage.protos.ContactRecord;
@@ -31,6 +32,9 @@ import okio.ByteString;
 import static org.signal.core.util.StringExtensionsKt.emptyIfNull;
 
 public final class StorageSyncModels {
+
+    private final static boolean useBinaryId = false;
+    private final static boolean useStringId = true;
 
     private StorageSyncModels() {
     }
@@ -89,13 +93,19 @@ public final class StorageSyncModels {
     public static ContactRecord localToRemoteRecord(Recipient recipient, IdentityInfo identity) {
         final var address = recipient.getAddress();
         final var builder = SignalContactRecord.Companion.newBuilder(recipient.getStorageRecord())
-                .aci(address.aci().map(ACI::toString).orElse(""))
                 .e164(address.number().orElse(""))
-                .pni(address.pni().map(PNI::toStringWithoutPrefix).orElse(""))
                 .username(address.username().orElse(""))
                 .profileKey(recipient.getProfileKey() == null
                         ? ByteString.EMPTY
                         : ByteString.of(recipient.getProfileKey().serialize()));
+        if (useBinaryId) {
+            builder.aciBinary(address.aci().map(ACI::toByteString).orElse(ByteString.EMPTY))
+                    .pniBinary(address.pni().map(PNI::toByteString).orElse(ByteString.EMPTY));
+        }
+        if (useStringId) {
+            builder.aci(address.aci().map(ACI::toString).orElse(""))
+                    .pni(address.pni().map(PNI::toStringWithoutPrefix).orElse(""));
+        }
         if (recipient.getProfile() != null) {
             builder.givenName(emptyIfNull(recipient.getProfile().getGivenName()))
                     .familyName(emptyIfNull(recipient.getProfile().getFamilyName()));
@@ -104,10 +114,7 @@ public final class StorageSyncModels {
             builder.systemGivenName(emptyIfNull(recipient.getContact().givenName()))
                     .systemFamilyName(emptyIfNull(recipient.getContact().familyName()))
                     .systemNickname(emptyIfNull(recipient.getContact().nickName()))
-                    .nickname(new ContactRecord.Name.Builder().given(emptyIfNull(recipient.getContact()
-                                    .nickNameGivenName()))
-                            .family(emptyIfNull(recipient.getContact().nickNameFamilyName()))
-                            .build())
+                    .nickname(getNicknameRemoteRecord(recipient.getContact()))
                     .note(emptyIfNull(recipient.getContact().note()))
                     .blocked(recipient.getContact().isBlocked())
                     .whitelisted(recipient.getContact().isProfileSharingEnabled())
@@ -124,6 +131,15 @@ public final class StorageSyncModels {
                     .identityState(localToRemote(identity.getTrustLevel()));
         }
         return builder.build();
+    }
+
+    private static ContactRecord.Name getNicknameRemoteRecord(final Contact contact) {
+        final var given = emptyIfNull(contact.nickNameGivenName());
+        final var family = emptyIfNull(contact.nickNameFamilyName());
+        if (given.isEmpty() && family.isEmpty()) {
+            return null;
+        }
+        return new ContactRecord.Name.Builder().given(given).family(family).build();
     }
 
     public static GroupV1Record localToRemoteRecord(GroupInfoV1 group) {

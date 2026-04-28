@@ -41,6 +41,9 @@ public class Commands {
         addCommand(new SendContactsCommand());
         addCommand(new SendMessageRequestResponseCommand());
         addCommand(new SendPaymentNotificationCommand());
+        addCommand(new SendPollCreateCommand());
+        addCommand(new SendPollVoteCommand());
+        addCommand(new SendPollTerminateCommand());
         addCommand(new SendReactionCommand());
         addCommand(new SendReceiptCommand());
         addCommand(new SendSyncRequestCommand());
@@ -55,6 +58,7 @@ public class Commands {
         addCommand(new UpdateAccountCommand());
         addCommand(new UpdateConfigurationCommand());
         addCommand(new UpdateContactCommand());
+        addCommand(new UpdateDeviceCommand());
         addCommand(new UpdateGroupCommand());
         addCommand(new UpdateProfileCommand());
         addCommand(new UploadStickerPackCommand());

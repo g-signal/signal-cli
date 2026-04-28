@@ -1,6 +1,9 @@
 package org.asamk.signal.manager.util;
 
 import org.asamk.signal.manager.api.Pair;
+import org.signal.core.models.ServiceId;
+import org.signal.libsignal.net.BadRequestError;
+import org.signal.libsignal.net.RequestResult;
 import org.signal.libsignal.protocol.IdentityKey;
 import org.signal.libsignal.protocol.fingerprint.Fingerprint;
 import org.signal.libsignal.protocol.fingerprint.NumericFingerprintGenerator;
@@ -8,7 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.whispersystems.signalservice.api.NetworkResult;
 import org.whispersystems.signalservice.api.NetworkResultUtil;
-import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.util.StreamDetails;
 
 import java.io.ByteArrayInputStream;
@@ -146,7 +148,7 @@ public class Utils {
         var params = query.split("&");
         var map = new HashMap<String, String>();
         for (var param : params) {
-            final var paramParts = param.split("=");
+            final var paramParts = param.split("=", 2);
             var name = URLDecoder.decode(paramParts[0], StandardCharsets.UTF_8);
             var value = paramParts.length == 1 ? null : URLDecoder.decode(paramParts[1], StandardCharsets.UTF_8);
             map.put(name, value);
@@ -156,6 +158,25 @@ public class Utils {
 
     public static <T> T handleResponseException(final NetworkResult<T> response) throws IOException {
         return NetworkResultUtil.toBasicLegacy(response);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T, E extends BadRequestError> T handleResponseException(final RequestResult<T, E> result) throws IOException {
+        if (result instanceof RequestResult.Success<?> success) {
+            return ((RequestResult.Success<T>) success).getResult();
+        } else if (result instanceof RequestResult.ApplicationError e) {
+            final var cause = e.getCause();
+            switch (cause) {
+                case IOException io -> throw io;
+                case RuntimeException rt -> throw rt;
+                default -> throw new RuntimeException(cause);
+            }
+        } else if (result instanceof RequestResult.RetryableNetworkError e) {
+            throw e.getNetworkError();
+        } else if (result instanceof RequestResult.NonSuccess) {
+            throw new AssertionError();
+        }
+        throw new IllegalStateException("Unexpected value: " + result);
     }
 
     public static ByteString firstNonEmpty(ByteString... strings) {

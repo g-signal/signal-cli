@@ -5,13 +5,13 @@ import org.asamk.signal.manager.api.TrustNewIdentity;
 import org.asamk.signal.manager.storage.Database;
 import org.asamk.signal.manager.storage.Utils;
 import org.asamk.signal.manager.storage.recipients.RecipientStore;
+import org.signal.core.models.ServiceId;
 import org.signal.libsignal.protocol.IdentityKey;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.protocol.state.IdentityKeyStore.Direction;
 import org.signal.libsignal.protocol.state.IdentityKeyStore.IdentityChange;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.whispersystems.signalservice.api.push.ServiceId;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -280,8 +280,9 @@ public class IdentityKeyStore {
                 identityInfo.getDateAddedTimestamp());
         final var sql = (
                 """
-                INSERT OR REPLACE INTO %s (address, identity_key, added_timestamp, trust_level)
+                INSERT INTO %s (address, identity_key, added_timestamp, trust_level)
                 VALUES (?, ?, ?, ?)
+                ON CONFLICT (address) DO UPDATE SET identity_key=excluded.identity_key, added_timestamp=excluded.added_timestamp, trust_level=excluded.trust_level
                 """
         ).formatted(TABLE_IDENTITY);
         try (final var statement = connection.prepareStatement(sql)) {

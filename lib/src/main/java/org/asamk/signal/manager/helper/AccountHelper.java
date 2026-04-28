@@ -14,6 +14,8 @@ import org.asamk.signal.manager.storage.SignalAccount;
 import org.asamk.signal.manager.util.KeyUtils;
 import org.asamk.signal.manager.util.NumberVerificationUtils;
 import org.asamk.signal.manager.util.Utils;
+import org.signal.core.models.ServiceId.ACI;
+import org.signal.core.models.ServiceId.PNI;
 import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.IdentityKeyPair;
 import org.signal.libsignal.protocol.InvalidKeyException;
@@ -28,8 +30,6 @@ import org.slf4j.LoggerFactory;
 import org.whispersystems.signalservice.api.account.ChangePhoneNumberRequest;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.link.LinkedDeviceVerificationCodeResponse;
-import org.whispersystems.signalservice.api.push.ServiceId.ACI;
-import org.whispersystems.signalservice.api.push.ServiceId.PNI;
 import org.whispersystems.signalservice.api.push.ServiceIdType;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.SignedPreKeyEntity;
@@ -82,16 +82,9 @@ public class AccountHelper {
     }
 
     public void checkAccountState() throws IOException {
-        if (account.getLastReceiveTimestamp() == 0) {
-            logger.info("The Signal protocol expects that incoming messages are regularly received.");
-        } else {
-            var diffInMilliseconds = System.currentTimeMillis() - account.getLastReceiveTimestamp();
-            long days = TimeUnit.DAYS.convert(diffInMilliseconds, TimeUnit.MILLISECONDS);
-            if (days > 7) {
-                logger.warn(
-                        "Messages have been last received {} days ago. The Signal protocol expects that incoming messages are regularly received.",
-                        days);
-            }
+        if (account.getAci() == null) {
+            account.setRegistered(false);
+            throw new IOException("Account without ACI");
         }
         try {
             updateAccountAttributes();
@@ -100,7 +93,7 @@ public class AccountHelper {
             } else {
                 context.getPreKeyHelper().refreshPreKeysIfNecessary();
             }
-            if (account.getAci() == null || account.getPni() == null) {
+            if (account.getPni() == null) {
                 checkWhoAmiI();
             }
             if (!account.isPrimaryDevice() && account.getPniIdentityKeyPair() == null) {
@@ -124,6 +117,17 @@ public class AccountHelper {
         } catch (AuthorizationFailedException e) {
             account.setRegistered(false);
             throw e;
+        }
+        if (account.getLastReceiveTimestamp() == 0) {
+            logger.info("The Signal protocol expects that incoming messages are regularly received.");
+        } else {
+            var diffInMilliseconds = System.currentTimeMillis() - account.getLastReceiveTimestamp();
+            long days = TimeUnit.DAYS.convert(diffInMilliseconds, TimeUnit.MILLISECONDS);
+            if (days > 7) {
+                logger.warn(
+                        "Messages have been last received {} days ago. The Signal protocol expects that incoming messages are regularly received.",
+                        days);
+            }
         }
     }
 
@@ -285,6 +289,9 @@ public class AccountHelper {
         }
 
         final var sessionId = account.getSessionId(newNumber);
+        if (sessionId == null) {
+            throw new IOException("No change number verification session active");
+        }
         final var result = NumberVerificationUtils.verifyNumber(sessionId,
                 verificationCode,
                 pin,
@@ -308,6 +315,7 @@ public class AccountHelper {
                             Utils.mapKeys(pniRegistrationIds, Object::toString))));
                 });
 
+        account.clearSessionId();
         final var updatePni = PNI.parseOrThrow(result.first().getPni());
         if (updatePni.equals(account.getPni())) {
             logger.debug("PNI is unchanged after change number");
@@ -512,6 +520,22 @@ public class AccountHelper {
         final var privateKey = account.getAciIdentityKeyPair().getPrivateKey();
         final var encryptedDeviceName = DeviceNameUtil.encryptDeviceName(deviceName, privateKey);
         account.setEncryptedDeviceName(encryptedDeviceName);
+    }
+
+    public void setDeviceName(int deviceId, String deviceName) throws IOException {
+        final var privateKey = account.getAciIdentityKeyPair().getPrivateKey();
+        final var encryptedDeviceName = DeviceNameUtil.encryptDeviceName(deviceName, privateKey);
+        handleResponseException(dependencies.getLinkDeviceApi().setDeviceName(encryptedDeviceName, deviceId));
+        context.getSyncHelper().sendDeviceNameChange(deviceId);
+    }
+
+    public void refreshDeviceName() throws IOException {
+        final var devices = handleResponseException(dependencies.getLinkDeviceApi().getDevices());
+        final var deviceId = account.getDeviceId();
+        final var device = devices.stream().filter(d -> d.id == deviceId).findFirst();
+        if (device.isPresent()) {
+            account.setEncryptedDeviceName(device.get().name);
+        }
     }
 
     public void updateAccountAttributes() throws IOException {

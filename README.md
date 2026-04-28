@@ -8,7 +8,7 @@ For registering you need a phone number where you can receive SMS or incoming ca
 
 signal-cli is primarily intended to be used on servers to notify admins of important events.
 For this use-case, it has a daemon mode with JSON-RPC interface ([man page](https://github.com/AsamK/signal-cli/blob/master/man/signal-cli-jsonrpc.5.adoc))
-and D-BUS interface ([man page](https://github.com/AsamK/signal-cli/blob/master/man/signal-cli-dbus.5.adoc)) .
+and D-BUS interface ([man page](https://github.com/AsamK/signal-cli/blob/master/man/signal-cli-dbus.5.adoc)).
 For the JSON-RPC interface there's also a simple [example client](https://github.com/AsamK/signal-cli/tree/master/client), written in Rust.
 
 signal-cli needs to be kept up-to-date to keep up with Signal-Server changes.
@@ -30,15 +30,24 @@ System requirements:
   systems/architectures
   see: [Provide native lib for libsignal](https://github.com/AsamK/signal-cli/wiki/Provide-native-lib-for-libsignal)
 
-### Install system-wide on Linux
+### Install system-wide on Linux [ JVM build ]
 
 See [latest version](https://github.com/AsamK/signal-cli/releases).
 
 ```sh
-export VERSION=<latest version, format "x.y.z">
-wget https://github.com/AsamK/signal-cli/releases/download/v"${VERSION}"/signal-cli-"${VERSION}".tar.gz
+VERSION=$(curl -Ls -o /dev/null -w %{url_effective} https://github.com/AsamK/signal-cli/releases/latest | sed -e 's/^.*\/v//')
+curl -L -O https://github.com/AsamK/signal-cli/releases/download/v"${VERSION}"/signal-cli-"${VERSION}".tar.gz
 sudo tar xf signal-cli-"${VERSION}".tar.gz -C /opt
 sudo ln -sf /opt/signal-cli-"${VERSION}"/bin/signal-cli /usr/local/bin/
+```
+
+### Install system-wide on Linux [ GraalVM native build ]
+
+```sh
+VERSION=$(curl -Ls -o /dev/null -w %{url_effective} https://github.com/AsamK/signal-cli/releases/latest | sed -e 's/^.*\/v//')
+curl -L -O https://github.com/AsamK/signal-cli/releases/download/v"${VERSION}"/signal-cli-"${VERSION}"-Linux-native.tar.gz
+sudo tar xf signal-cli-"${VERSION}"-Linux-native.tar.gz -C /opt
+sudo ln -sf /opt/signal-cli /usr/local/bin/
 ```
 
 You can find further instructions on the Wiki:

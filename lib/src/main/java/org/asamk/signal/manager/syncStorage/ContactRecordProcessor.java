@@ -8,14 +8,14 @@ import org.asamk.signal.manager.jobs.RefreshRecipientsJob;
 import org.asamk.signal.manager.storage.SignalAccount;
 import org.asamk.signal.manager.storage.recipients.RecipientAddress;
 import org.asamk.signal.manager.util.KeyUtils;
+import org.signal.core.models.ServiceId.ACI;
+import org.signal.core.models.ServiceId.PNI;
 import org.signal.libsignal.protocol.IdentityKey;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.whispersystems.signalservice.api.push.ServiceId.ACI;
-import org.whispersystems.signalservice.api.push.ServiceId.PNI;
 import org.whispersystems.signalservice.api.storage.SignalContactRecord;
 import org.whispersystems.signalservice.api.storage.StorageId;
 import org.whispersystems.signalservice.internal.storage.protos.ContactRecord;
@@ -63,8 +63,8 @@ public class ContactRecordProcessor extends DefaultStorageRecordProcessor<Signal
     @Override
     protected boolean isInvalid(SignalContactRecord remoteRecord) {
         final var remote = remoteRecord.getProto();
-        final var aci = ACI.parseOrNull(remote.aci);
-        final var pni = PNI.parseOrNull(remote.pni);
+        final var aci = ACI.parseOrNull(remote.aci, remote.aciBinary);
+        final var pni = PNI.parseOrNull(remote.pni, remote.pniBinary);
         final var e164 = nullIfEmpty(remote.e164);
         boolean hasAci = aci != null && aci.isValid();
         boolean hasPni = pni != null && pni.isValid();
@@ -129,7 +129,7 @@ public class ContactRecordProcessor extends DefaultStorageRecordProcessor<Signal
             identityKey = local.identityKey.size() > 0 ? local.identityKey : ByteString.EMPTY;
         }
 
-        if (!local.aci.isEmpty()
+        if ((!local.aci.isEmpty() || local.aciBinary.size() > 0)
                 && local.identityKey.size() > 0
                 && remote.identityKey.size() > 0
                 && !local.identityKey.equals(remote.identityKey)) {
@@ -172,16 +172,22 @@ public class ContactRecordProcessor extends DefaultStorageRecordProcessor<Signal
             e164 = firstNonEmpty(remote.e164, local.e164);
         }
 
+        final var remoteProfileKey = remote.profileKey.size() == 0
+                || KeyUtils.profileKeyOrNull(remote.profileKey.toByteArray()) == null
+                ? ByteString.EMPTY
+                : remote.profileKey;
         final var mergedBuilder = remote.newBuilder()
                 .aci(local.aci.isEmpty() ? remote.aci : local.aci)
+                .aciBinary(firstNonEmpty(local.aciBinary, remote.aciBinary))
                 .e164(e164)
                 .pni(pni)
+                .pniBinary(pni.isEmpty() ? ByteString.EMPTY : PNI.parseOrThrow(pni).toByteStringWithoutPrefix())
                 .givenName(profileGivenName)
                 .familyName(profileFamilyName)
                 .systemGivenName(account.isPrimaryDevice() ? local.systemGivenName : remote.systemGivenName)
                 .systemFamilyName(account.isPrimaryDevice() ? local.systemFamilyName : remote.systemFamilyName)
                 .systemNickname(remote.systemNickname)
-                .profileKey(firstNonEmpty(remote.profileKey, local.profileKey))
+                .profileKey(firstNonEmpty(remoteProfileKey, local.profileKey))
                 .username(firstNonEmpty(remote.username, local.username))
                 .identityState(identityState)
                 .identityKey(identityKey)
@@ -321,8 +327,8 @@ public class ContactRecordProcessor extends DefaultStorageRecordProcessor<Signal
     }
 
     private static RecipientAddress getRecipientAddress(final ContactRecord contactRecord) {
-        return new RecipientAddress(ACI.parseOrNull(contactRecord.aci),
-                PNI.parseOrNull(contactRecord.pni),
+        return new RecipientAddress(ACI.parseOrNull(contactRecord.aci, contactRecord.aciBinary),
+                PNI.parseOrNull(contactRecord.pni, contactRecord.pniBinary),
                 nullIfEmpty(contactRecord.e164),
                 nullIfEmpty(contactRecord.username));
     }
@@ -331,9 +337,16 @@ public class ContactRecordProcessor extends DefaultStorageRecordProcessor<Signal
     public int compare(SignalContactRecord lhsRecord, SignalContactRecord rhsRecord) {
         final var lhs = lhsRecord.getProto();
         final var rhs = rhsRecord.getProto();
-        if ((!lhs.aci.isEmpty() && Objects.equals(lhs.aci, rhs.aci)) || (
+        if ((
+                (!lhs.aci.isEmpty() && Objects.equals(lhs.aci, rhs.aci)) || (
+                        lhs.aciBinary.size() != 0 && Objects.equals(lhs.aciBinary, rhs.aciBinary)
+                )
+        ) || (
                 !lhs.e164.isEmpty() && Objects.equals(lhs.e164, rhs.e164)
-        ) || (!lhs.pni.isEmpty() && Objects.equals(lhs.pni, rhs.pni))) {
+        ) || (
+                (!lhs.pni.isEmpty() && Objects.equals(lhs.pni, rhs.pni) && lhs.pniBinary == rhs.pniBinary)
+                        || (lhs.pniBinary.size() != 0 && Objects.equals(lhs.pniBinary, rhs.pniBinary))
+        )) {
             return 0;
         } else {
             return 1;

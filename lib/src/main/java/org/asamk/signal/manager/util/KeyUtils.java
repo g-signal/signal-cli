@@ -1,6 +1,7 @@
 package org.asamk.signal.manager.util;
 
 import org.asamk.signal.manager.storage.SignalAccount;
+import org.signal.core.models.backup.MediaRootBackupKey;
 import org.signal.libsignal.protocol.IdentityKey;
 import org.signal.libsignal.protocol.IdentityKeyPair;
 import org.signal.libsignal.protocol.InvalidKeyException;
@@ -14,7 +15,6 @@ import org.signal.libsignal.protocol.state.SignedPreKeyRecord;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.account.PreKeyCollection;
-import org.whispersystems.signalservice.api.backup.MediaRootBackupKey;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -93,6 +93,17 @@ public class KeyUtils {
             return new ProfileKey(getSecretBytes(32));
         } catch (InvalidInputException e) {
             throw new AssertionError("Profile key is guaranteed to be 32 bytes here");
+        }
+    }
+
+    public static ProfileKey profileKeyOrNull(byte[] profileKey) {
+        if (profileKey == null) {
+            return null;
+        }
+        try {
+            return new ProfileKey(profileKey);
+        } catch (InvalidInputException e) {
+            return null;
         }
     }
 
