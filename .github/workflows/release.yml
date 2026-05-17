@@ -19,7 +19,7 @@ jobs:
   ci_wf:
     permissions:
       contents: write
-    uses: g-signal/signal-cli/.github/workflows/ci.yml@bamain
+    uses: g-signal/signal-cli/.github/workflows/ci.yml@branch_from_tagv0.13.18.batest.14
     # ${{ github.repository }} not accepted here
 
   lib_to_jar:
