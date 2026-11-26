@@ -30,16 +30,15 @@ application {
 graalvmNative {
     binaries {
         this["main"].run {
-            buildArgs.add("--install-exit-handlers")
             buildArgs.add("-Dfile.encoding=UTF-8")
             buildArgs.add("-J-Dfile.encoding=UTF-8")
             buildArgs.add("-march=compatibility")
+            buildArgs.add("--enable-native-access=ALL-UNNAMED")
             resources.autodetect()
-            configurationFileDirectories.from(file("graalvm-config-dir"))
             if (System.getenv("GRAALVM_HOME") == null) {
                 toolchainDetection.set(true)
                 javaLauncher.set(javaToolchains.launcherFor {
-                    languageVersion.set(JavaLanguageVersion.of(21))
+                    languageVersion.set(JavaLanguageVersion.of(25))
                 })
             } else {
                 toolchainDetection.set(false)
@@ -125,6 +124,7 @@ tasks.register("fatJar", type = Jar::class) {
     archiveBaseName.set("${project.name}-fat")
     exclude(
         "META-INF/*.SF",
+        "META-INF/**/*.MF",
         "META-INF/*.DSA",
         "META-INF/*.RSA",
         "META-INF/NOTICE*",
