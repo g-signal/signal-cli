@@ -130,7 +130,8 @@ public class GroupHelper {
     public GroupInfoV2 getOrMigrateGroup(
             final GroupMasterKey groupMasterKey,
             final int revision,
-            final byte[] signedGroupChange
+            final byte[] signedGroupChange,
+            final boolean ignoreAvatars
     ) {
         final var groupSecretParams = GroupSecretParams.deriveFromMasterKey(groupMasterKey);
 
@@ -166,7 +167,7 @@ public class GroupHelper {
             if (group != null) {
                 storeProfileKeysFromMembers(group);
                 final var avatar = group.avatar;
-                if (!avatar.isEmpty()) {
+                if (!avatar.isEmpty() && !ignoreAvatars) {
                     downloadGroupAvatar(groupId, groupSecretParams, avatar);
                 }
             }
@@ -298,7 +299,9 @@ public class GroupHelper {
             final GroupPermission editDetailsPermission,
             final String avatarFile,
             final Integer expirationTimer,
-            final Boolean isAnnouncementGroup
+            final Boolean isAnnouncementGroup,
+            final String labelEmoji,
+            final String labelString
     ) throws IOException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, GroupSendingNotAllowedException {
         var group = getGroupForUpdating(groupId);
         final var avatarBytes = readAvatarBytes(avatarFile);
@@ -322,7 +325,9 @@ public class GroupHelper {
                             editDetailsPermission,
                             avatarBytes,
                             expirationTimer,
-                            isAnnouncementGroup);
+                            isAnnouncementGroup,
+                            labelEmoji,
+                            labelString);
                 } catch (ConflictException e) {
                     // Detected conflicting update, refreshing group and trying again
                     group = getGroup(groupId, true);
@@ -341,7 +346,9 @@ public class GroupHelper {
                             editDetailsPermission,
                             avatarBytes,
                             expirationTimer,
-                            isAnnouncementGroup);
+                            isAnnouncementGroup,
+                            labelEmoji,
+                            labelString);
                 }
             }
 
@@ -391,7 +398,8 @@ public class GroupHelper {
                 .joinGroup(inviteLinkUrl.getGroupMasterKey(), inviteLinkUrl.getPassword(), groupJoinInfo);
         final var group = getOrMigrateGroup(inviteLinkUrl.getGroupMasterKey(),
                 groupJoinInfo.revision + 1,
-                changeResponse.group_change == null ? null : changeResponse.group_change.encode());
+                changeResponse.group_change == null ? null : changeResponse.group_change.encode(),
+                false);
 
         if (group.getGroup() == null) {
             // Only requested member, can't send update to group members
@@ -680,7 +688,7 @@ public class GroupHelper {
 
     private void sendExpirationTimerUpdate(GroupIdV1 groupId) throws IOException, NotAGroupMemberException, GroupNotFoundException, GroupSendingNotAllowedException {
         final var messageBuilder = SignalServiceDataMessage.newBuilder().asExpirationUpdate();
-        context.getSendHelper().sendAsGroupMessage(messageBuilder, groupId, false, Optional.empty());
+        context.getSendHelper().sendAsGroupMessage(messageBuilder, groupId, false, Optional.empty(), true);
     }
 
     private SendGroupMessageResults updateGroupV2(
@@ -699,7 +707,9 @@ public class GroupHelper {
             final GroupPermission editDetailsPermission,
             final byte[] avatarFile,
             final Integer expirationTimer,
-            final Boolean isAnnouncementGroup
+            final Boolean isAnnouncementGroup,
+            final String labelEmoji,
+            final String labelString
     ) throws IOException {
         SendGroupMessageResults result = null;
         final var groupV2Helper = context.getGroupV2Helper();
@@ -756,7 +766,7 @@ public class GroupHelper {
         if (admins != null) {
             final var newAdmins = new HashSet<>(admins);
             newAdmins.retainAll(group.getMembers());
-            newAdmins.removeAll(group.getAdminMembers());
+            newAdmins.removeAll(group.getAdminMemberRecipientIds());
             if (!newAdmins.isEmpty()) {
                 for (var admin : newAdmins) {
                     var groupGroupChangePair = groupV2Helper.setMemberAdmin(group, admin, true);
@@ -769,7 +779,7 @@ public class GroupHelper {
 
         if (removeAdmins != null) {
             final var existingRemoveAdmins = new HashSet<>(removeAdmins);
-            existingRemoveAdmins.retainAll(group.getAdminMembers());
+            existingRemoveAdmins.retainAll(group.getAdminMemberRecipientIds());
             if (!existingRemoveAdmins.isEmpty()) {
                 for (var admin : existingRemoveAdmins) {
                     var groupGroupChangePair = groupV2Helper.setMemberAdmin(group, admin, false);
@@ -828,6 +838,15 @@ public class GroupHelper {
             result = sendUpdateGroupV2Message(group, groupGroupChangePair.first(), groupGroupChangePair.second());
         }
 
+        if (labelString != null || labelEmoji != null) {
+            final var selfRecipientId = account.getSelfRecipientId();
+            final var selfMember = group.getMember(selfRecipientId);
+            var groupGroupChangePair = groupV2Helper.setMemberLabels(group,
+                    labelEmoji != null ? labelEmoji : selfMember.labelEmoji(),
+                    labelString != null ? labelString : selfMember.labelString());
+            result = sendUpdateGroupV2Message(group, groupGroupChangePair.first(), groupGroupChangePair.second());
+        }
+
         if (name != null || description != null || avatarFile != null) {
             var groupGroupChangePair = groupV2Helper.updateGroup(group, name, description, avatarFile);
             if (avatarFile != null) {
@@ -857,7 +876,7 @@ public class GroupHelper {
             final GroupInfoV2 groupInfoV2,
             final Set<RecipientId> newAdmins
     ) throws LastGroupAdminException, IOException {
-        final var currentAdmins = groupInfoV2.getAdminMembers();
+        final var currentAdmins = groupInfoV2.getAdminMemberRecipientIds();
         newAdmins.removeAll(currentAdmins);
         newAdmins.retainAll(groupInfoV2.getMembers());
         if (currentAdmins.contains(account.getSelfRecipientId())
@@ -886,7 +905,7 @@ public class GroupHelper {
         var group = SignalServiceGroup.newBuilder(SignalServiceGroup.Type.UPDATE)
                 .withId(g.getGroupId().serialize())
                 .withName(g.name)
-                .withMembers(g.getMembers()
+                .withMembers(g.getMemberRecipientIds()
                         .stream()
                         .map(context.getRecipientHelper()::resolveSignalServiceAddress)
                         .toList());

@@ -10,6 +10,7 @@ import org.asamk.signal.manager.api.DeviceLinkUrl;
 import org.asamk.signal.manager.api.GroupId;
 import org.asamk.signal.manager.api.GroupInviteLinkUrl;
 import org.asamk.signal.manager.api.GroupLinkState;
+import org.asamk.signal.manager.api.GroupMember;
 import org.asamk.signal.manager.api.GroupNotFoundException;
 import org.asamk.signal.manager.api.GroupPermission;
 import org.asamk.signal.manager.api.GroupSendingNotAllowedException;
@@ -242,7 +243,8 @@ public class DbusSignalImpl implements Signal, AutoCloseable {
                     Optional.empty(),
                     List.of(),
                     Optional.empty(),
-                    List.of());
+                    List.of(),
+                    true);
             final var recipientIdentifiers = getSingleRecipientIdentifiers(recipients, m.getSelfNumber()).stream()
                     .map(RecipientIdentifier.class::cast)
                     .collect(Collectors.toSet());
@@ -407,7 +409,8 @@ public class DbusSignalImpl implements Signal, AutoCloseable {
                     Optional.empty(),
                     List.of(),
                     Optional.empty(),
-                    List.of());
+                    List.of(),
+                    true);
             final var results = m.sendMessage(message, Set.of(RecipientIdentifier.NoteToSelf.INSTANCE), false);
             checkSendMessageResults(results);
             return results.timestamp();
@@ -453,7 +456,8 @@ public class DbusSignalImpl implements Signal, AutoCloseable {
                     Optional.empty(),
                     List.of(),
                     Optional.empty(),
-                    List.of());
+                    List.of(),
+                    true);
             var results = m.sendMessage(message, Set.of(getGroupRecipientIdentifier(groupId)), false);
             checkSendMessageResults(results);
             return results.timestamp();
@@ -621,7 +625,7 @@ public class DbusSignalImpl implements Signal, AutoCloseable {
         if (group == null) {
             return List.of();
         } else {
-            final var members = group.members();
+            final var members = group.members().stream().map(GroupMember::recipientAddress).collect(Collectors.toSet());
             return getRecipientStrings(members);
         }
     }
@@ -673,12 +677,6 @@ public class DbusSignalImpl implements Signal, AutoCloseable {
         } catch (UnregisteredRecipientException e) {
             throw new Error.UntrustedIdentity(e.getSender().getIdentifier() + " is not registered.");
         }
-    }
-
-    @Override
-    @Deprecated
-    public boolean isRegistered() {
-        return true;
     }
 
     @Override
@@ -1303,13 +1301,20 @@ public class DbusSignalImpl implements Signal, AutoCloseable {
                                     () -> getGroup().messageExpirationTimer(),
                                     this::setMessageExpirationTime),
                             new DbusProperty<>("Members",
-                                    () -> new Variant<>(getRecipientStrings(getGroup().members()), "as")),
+                                    () -> new Variant<>(getRecipientStrings(getGroup().members()
+                                            .stream()
+                                            .map(GroupMember::recipientAddress)
+                                            .collect(Collectors.toSet())), "as")),
                             new DbusProperty<>("PendingMembers",
                                     () -> new Variant<>(getRecipientStrings(getGroup().pendingMembers()), "as")),
                             new DbusProperty<>("RequestingMembers",
                                     () -> new Variant<>(getRecipientStrings(getGroup().requestingMembers()), "as")),
                             new DbusProperty<>("Admins",
-                                    () -> new Variant<>(getRecipientStrings(getGroup().adminMembers()), "as")),
+                                    () -> new Variant<>(getRecipientStrings(getGroup().members()
+                                            .stream()
+                                            .filter(GroupMember::isAdmin)
+                                            .map(GroupMember::recipientAddress)
+                                            .collect(Collectors.toSet())), "as")),
                             new DbusProperty<>("Banned",
                                     () -> new Variant<>(getRecipientStrings(getGroup().bannedMembers()), "as")),
                             new DbusProperty<>("PermissionAddMember",

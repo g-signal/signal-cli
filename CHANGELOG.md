@@ -1,5 +1,57 @@
 # Changelog
 
+## [0.14.1] - 2026-03-08
+
+### Added
+
+- Added isArchived to contact json output (Thanks @moppman)
+- Added support for group member labels
+
+### Fixed
+
+- Adapt registration to signal server changes
+
+## [0.14.0] - 2026-03-01
+
+**Attention**: Now requires Java 25
+
+Requires libsignal-client version 0.87.4.
+
+### Breaking changes
+
+- Remove isRegistered method without parameters from Signal dbus interface, which always returned `true`
+- Remove `sandbox` value for --service-environment parameter, use `staging` instead
+- The `daemon` command now requires at least one channel parameter (`--socket`, `--dbus`, ...) and no longer defaults to
+  dbus
+
+### Added
+
+- The `link` command now prints a QR code in the terminal. (Thanks @karel1980)
+- Add --ignore-avatars flag to prevent downloading avatars
+- Add --ignore-stickers flag to prevent downloading sticker packs
+- Add `--no-urgent` flag to `send` command to send messages that don't trigger a push notification. (Thanks @kaikozlov)
+- Add `sendPinMessage`/`sendUnpinMessage` commands for pinning messages
+
+### Improved
+
+- Improved behavior for unregistered contacts
+- Profiles are refreshed when using the listContacts command
+- For long text messages the text attachment is used instead of the truncated body
+
+### Fixed
+
+- Adapted to new binary aci/pni formats in the Signal protocol
+- Group invites should now work when the user was invited via phone number (PNI only)
+
+## [0.13.24] - 2026-02-05
+
+Requires libsignal-client version 0.87.0.
+
+### Improved
+
+- Improve performance of first send to large group
+- Improve envelope validation
+
 ## [0.13.23] - 2026-01-24
 
 Requires libsignal-client version 0.86.12.
@@ -137,9 +189,11 @@ Requires libsignal-client version 0.68.1.
 Requires libsignal-client version 0.66.2.
 
 ### Added
+
 - Allow setting nickname and note with `updateContact` command
 
 ### Fixed
+
 - Fix syncing nickname, note and expiration timer
 - Fix check for registered users with a proxy
 - Improve handling of storage records not yet supported by signal-cli
@@ -165,6 +219,7 @@ Requires libsignal-client version 0.65.2.
 Requires libsignal-client version 0.64.0.
 
 ### Fixed
+
 - Fix issue with receiving messages that have an invalid destination
 
 ## [0.13.10] - 2024-11-30
@@ -177,6 +232,7 @@ Requires libsignal-client version 0.62.0.
 - Fix receiving expiration timer updates
 
 ### Improved
+
 - Add support for new storage encryption scheme
 
 ## [0.13.9] - 2024-10-28

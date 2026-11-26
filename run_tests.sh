@@ -11,6 +11,7 @@ NUMBER_2="$2"
 TEST_PIN_1=456test_pin_foo123
 NATIVE=0
 JSON_RPC=0
+DBUS=0
 TEST_REGISTER=0
 
 PATH_TEST_CONFIG="$PWD/test-config"
@@ -18,12 +19,19 @@ PATH_MAIN="$PATH_TEST_CONFIG/main"
 PATH_LINK="$PATH_TEST_CONFIG/link"
 
 if [ "$NATIVE" -eq 1 ]; then
+	./gradlew nativeCompile
 	SIGNAL_CLI="$PWD/build/native/nativeCompile/signal-cli"
 elif [ "$JSON_RPC" -eq 1 ]; then
+	export RUST_BACKTRACE=1
 	(cd client && cargo build)
-	"$PWD/build/install/signal-cli/bin/signal-cli" --verbose --verbose --trust-new-identities=always --config="$PATH_MAIN" --service-environment="staging" --log-file="$PATH_MAIN/log" daemon --socket --receive-mode=manual&
+	./gradlew installDist
 	"$PWD/build/install/signal-cli/bin/signal-cli" --verbose --verbose --trust-new-identities=always --config="$PATH_LINK" --service-environment="staging" --log-file="$PATH_LINK/log" daemon --tcp --receive-mode=manual&
-	sleep 5
+	if [ ! -z "$GRAALVM_HOME" ]; then
+	  export JAVA_HOME=$GRAALVM_HOME
+	  export SIGNAL_CLI_OPTS="-agentlib:native-image-agent=config-merge-dir=graalvm-config-dir-main/"
+	fi
+	"$PWD/build/install/signal-cli/bin/signal-cli" --verbose --verbose --trust-new-identities=always --config="$PATH_MAIN" --service-environment="staging" --log-file="$PATH_MAIN/log" daemon --socket --receive-mode=manual&
+	sleep 15
 	SIGNAL_CLI="$PWD/client/target/debug/signal-cli-client"
 else
 	./gradlew installDist
@@ -32,7 +40,7 @@ fi
 
 run() {
   # To update graalvm config, set GRAALVM_HOME, e.g:
-  # export GRAALVM_HOME=/usr/lib/jvm/java-21-graalvm
+  # export GRAALVM_HOME=/usr/lib/jvm/java-25-graalvm
   if [ ! -z "$GRAALVM_HOME" ]; then
     export JAVA_HOME=$GRAALVM_HOME
     export SIGNAL_CLI_OPTS="-agentlib:native-image-agent=config-merge-dir=graalvm-config-dir-${SIGNAL_CLI_AGENT_ID}/"
@@ -41,8 +49,10 @@ run() {
   set -x
   if [ "$JSON_RPC" -eq 1 ]; then
     "$SIGNAL_CLI" $@
+  elif [ "$DBUS" -eq 1 ]; then
+    "$SIGNAL_CLI" --dbus --verbose --verbose $@ | grep -v '^Warning:' | grep -v 'at org'
   else
-    "$SIGNAL_CLI" --service-environment="staging" --verbose --verbose $@
+    "$SIGNAL_CLI" --service-environment="staging" --verbose --verbose $@ | grep -v '^Warning:' | grep -v 'at org'
   fi
   set +x
 }
@@ -110,10 +120,10 @@ fi
 sleep 5
 
 run_main listAccounts
-run_main --output=json listAccounts
-run_main --scrub-log listAccounts
 
 if [ "$JSON_RPC" -eq 0 ]; then
+run_main --output=json listAccounts
+run_main --scrub-log listAccounts
 ## DBus
 #run_main -a "$NUMBER_1" --dbus send "$NUMBER_2" -m daemon_not_running || true
 #run_main daemon &
@@ -261,6 +271,6 @@ fi
 run_main -a "$NUMBER_2" deleteLocalAccountData || true
 
 if [ ! -z "$GRAALVM_HOME" ]; then
-  "$GRAALVM_HOME"/lib/svm/bin/native-image-configure generate --input-dir=graalvm-config-dir/ --input-dir=graalvm-config-dir-linked/ --input-dir=graalvm-config-dir-main/ --output-dir=graalvm-config-dir//
+  "$GRAALVM_HOME"/lib/svm/bin/native-image-configure generate --input-dir=src/main/resources/META-INF/native-image/org.asamk/signal-cli/ --input-dir=graalvm-config-dir-linked/ --input-dir=graalvm-config-dir-main/ --output-dir=src/main/resources/META-INF/native-image/org.asamk/signal-cli/
   rm -r graalvm-config-dir-main graalvm-config-dir-linked
 fi

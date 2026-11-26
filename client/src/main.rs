@@ -87,9 +87,19 @@ async fn handle_command(
             all_recipients,
             blocked,
             name,
+            detailed,
+            internal,
         } => {
             client
-                .list_contacts(cli.account, recipient, all_recipients, blocked, name)
+                .list_contacts(
+                    cli.account,
+                    recipient,
+                    all_recipients,
+                    blocked,
+                    name,
+                    detailed,
+                    internal,
+                )
                 .await
         }
         CliCommands::ListDevices => client.list_devices(cli.account).await,
@@ -108,8 +118,14 @@ async fn handle_command(
                 .quit_group(cli.account, group_id, delete, admin)
                 .await
         }
-        CliCommands::Register { voice, captcha } => {
-            client.register(cli.account, voice, captcha).await
+        CliCommands::Register {
+            voice,
+            captcha,
+            reregister,
+        } => {
+            client
+                .register(cli.account, voice, captcha, reregister)
+                .await
         }
         CliCommands::RemoveContact {
             recipient,
@@ -143,9 +159,12 @@ async fn handle_command(
         CliCommands::Send {
             recipient,
             group_id,
+            username,
+            notify_self,
             note_to_self,
             end_session,
             message,
+            message_from_stdin,
             attachment,
             view_once,
             mention,
@@ -164,15 +183,22 @@ async fn handle_command(
             story_timestamp,
             story_author,
             edit_timestamp,
+            no_urgent,
         } => {
             client
                 .send(
                     cli.account,
                     recipient,
                     group_id,
+                    username,
+                    notify_self,
                     note_to_self,
                     end_session,
-                    message.unwrap_or_default(),
+                    if message_from_stdin {
+                        std::io::read_to_string(std::io::stdin()).unwrap()
+                    } else {
+                        message.unwrap_or_default()
+                    },
                     attachment,
                     view_once,
                     mention,
@@ -191,10 +217,29 @@ async fn handle_command(
                     story_timestamp,
                     story_author,
                     edit_timestamp,
+                    no_urgent,
                 )
                 .await
         }
         CliCommands::SendContacts => client.send_contacts(cli.account).await,
+        CliCommands::SendAdminDelete {
+            group_id,
+            target_author,
+            target_timestamp,
+            story,
+            notify_self,
+        } => {
+            client
+                .send_admin_delete(
+                    cli.account,
+                    group_id,
+                    target_author,
+                    target_timestamp,
+                    story,
+                    notify_self,
+                )
+                .await
+        }
         CliCommands::SendPaymentNotification {
             recipient,
             receipt,
@@ -204,10 +249,108 @@ async fn handle_command(
                 .send_payment_notification(cli.account, recipient, receipt, note)
                 .await
         }
+        CliCommands::SendPinMessage {
+            recipient,
+            group_id,
+            username,
+            target_author,
+            target_timestamp,
+            pin_duration,
+            note_to_self,
+            notify_self,
+            story,
+        } => {
+            client
+                .send_pin_message(
+                    cli.account,
+                    recipient,
+                    group_id,
+                    username,
+                    target_author,
+                    target_timestamp,
+                    pin_duration,
+                    note_to_self,
+                    notify_self,
+                    story,
+                )
+                .await
+        }
+        CliCommands::SendPollCreate {
+            recipient,
+            group_id,
+            username,
+            question,
+            option,
+            no_multi,
+            note_to_self,
+            notify_self,
+        } => {
+            client
+                .send_poll_create(
+                    cli.account,
+                    recipient,
+                    group_id,
+                    username,
+                    question,
+                    option,
+                    no_multi,
+                    note_to_self,
+                    notify_self,
+                )
+                .await
+        }
+        CliCommands::SendPollTerminate {
+            recipient,
+            group_id,
+            username,
+            poll_timestamp,
+            note_to_self,
+            notify_self,
+        } => {
+            client
+                .send_poll_terminate(
+                    cli.account,
+                    recipient,
+                    group_id,
+                    username,
+                    poll_timestamp,
+                    note_to_self,
+                    notify_self,
+                )
+                .await
+        }
+        CliCommands::SendPollVote {
+            recipient,
+            group_id,
+            username,
+            poll_author,
+            poll_timestamp,
+            option,
+            vote_count,
+            note_to_self,
+            notify_self,
+        } => {
+            client
+                .send_poll_vote(
+                    cli.account,
+                    recipient,
+                    group_id,
+                    username,
+                    poll_author,
+                    poll_timestamp,
+                    option,
+                    vote_count,
+                    note_to_self,
+                    notify_self,
+                )
+                .await
+        }
         CliCommands::SendReaction {
             recipient,
             group_id,
+            username,
             note_to_self,
+            notify_self,
             emoji,
             target_author,
             target_timestamp,
@@ -219,7 +362,9 @@ async fn handle_command(
                     cli.account,
                     recipient,
                     group_id,
+                    username,
                     note_to_self,
+                    notify_self,
                     emoji,
                     target_author,
                     target_timestamp,
@@ -230,6 +375,7 @@ async fn handle_command(
         }
         CliCommands::SendReceipt {
             recipient,
+            username,
             target_timestamp,
             r#type,
         } => {
@@ -237,6 +383,7 @@ async fn handle_command(
                 .send_receipt(
                     cli.account,
                     recipient,
+                    username,
                     target_timestamp,
                     match r#type {
                         cli::ReceiptType::Read => "read".to_owned(),
@@ -253,6 +400,30 @@ async fn handle_command(
         } => {
             client
                 .send_typing(cli.account, recipient, group_id, stop)
+                .await
+        }
+        CliCommands::SendUnpinMessage {
+            recipient,
+            group_id,
+            username,
+            target_author,
+            target_timestamp,
+            note_to_self,
+            notify_self,
+            story,
+        } => {
+            client
+                .send_unpin_message(
+                    cli.account,
+                    recipient,
+                    group_id,
+                    username,
+                    target_author,
+                    target_timestamp,
+                    note_to_self,
+                    notify_self,
+                    story,
+                )
                 .await
         }
         CliCommands::SetPin { pin } => client.set_pin(cli.account, pin).await,
@@ -287,6 +458,8 @@ async fn handle_command(
             unrestricted_unidentified_sender,
             discoverable_by_number,
             number_sharing,
+            username,
+            delete_username,
         } => {
             client
                 .update_account(
@@ -295,6 +468,8 @@ async fn handle_command(
                     unrestricted_unidentified_sender,
                     discoverable_by_number,
                     number_sharing,
+                    username,
+                    delete_username,
                 )
                 .await
         }
@@ -318,9 +493,32 @@ async fn handle_command(
             recipient,
             expiration,
             name,
+            given_name,
+            family_name,
+            nick_given_name,
+            nick_family_name,
+            note,
         } => {
             client
-                .update_contact(cli.account, recipient, name, expiration)
+                .update_contact(
+                    cli.account,
+                    recipient,
+                    name,
+                    expiration,
+                    given_name,
+                    family_name,
+                    nick_given_name,
+                    nick_family_name,
+                    note,
+                )
+                .await
+        }
+        CliCommands::UpdateDevice {
+            device_id,
+            device_name,
+        } => {
+            client
+                .update_device(cli.account, device_id, device_name)
                 .await
         }
         CliCommands::UpdateGroup {
@@ -340,6 +538,8 @@ async fn handle_command(
             set_permission_edit_details,
             set_permission_send_messages,
             expiration,
+            member_label_emoji,
+            member_label,
         } => {
             client
                 .update_group(
@@ -373,6 +573,8 @@ async fn handle_command(
                         GroupPermission::OnlyAdmins => "onlyAdmins".to_owned(),
                     }),
                     expiration,
+                    member_label_emoji,
+                    member_label,
                 )
                 .await
         }

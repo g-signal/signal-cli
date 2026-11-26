@@ -12,6 +12,7 @@ import org.asamk.signal.manager.api.DeviceLinkUrl;
 import org.asamk.signal.manager.api.Group;
 import org.asamk.signal.manager.api.GroupId;
 import org.asamk.signal.manager.api.GroupInviteLinkUrl;
+import org.asamk.signal.manager.api.GroupMember;
 import org.asamk.signal.manager.api.GroupNotFoundException;
 import org.asamk.signal.manager.api.GroupPermission;
 import org.asamk.signal.manager.api.GroupSendingNotAllowedException;
@@ -494,6 +495,40 @@ public class DbusManagerImpl implements Manager {
     }
 
     @Override
+    public SendMessageResults sendAdminDelete(
+            final RecipientIdentifier.Single targetAuthor,
+            final long targetSentTimestamp,
+            final Set<RecipientIdentifier.Group> recipients,
+            final boolean notifySelf,
+            final boolean isStory
+    ) throws IOException, NotAGroupMemberException, GroupNotFoundException, GroupSendingNotAllowedException, UnregisteredRecipientException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public SendMessageResults sendPinMessage(
+            final int pinDuration,
+            final RecipientIdentifier.Single targetAuthor,
+            final long targetSentTimestamp,
+            final Set<RecipientIdentifier> recipients,
+            final boolean notifySelf,
+            final boolean isStory
+    ) throws IOException, NotAGroupMemberException, GroupNotFoundException, GroupSendingNotAllowedException, UnregisteredRecipientException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public SendMessageResults sendUnpinMessage(
+            final RecipientIdentifier.Single targetAuthor,
+            final long targetSentTimestamp,
+            final Set<RecipientIdentifier> recipients,
+            final boolean notifySelf,
+            final boolean isStory
+    ) throws IOException, NotAGroupMemberException, GroupNotFoundException, GroupSendingNotAllowedException, UnregisteredRecipientException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public SendMessageResults sendPaymentNotificationMessage(
             final byte[] receipt,
             final String note,
@@ -800,24 +835,22 @@ public class DbusManagerImpl implements Manager {
         final var group = getRemoteObject(groupPath, Signal.Group.class).GetAll("org.asamk.Signal.Group");
         final var id = (byte[]) group.get("Id").getValue();
         try {
+            final var admins = new HashSet<>(((List<String>) group.get("Admins").getValue()));
             return new Group(GroupId.unknownVersion(id),
                     (String) group.get("Name").getValue(),
                     (String) group.get("Description").getValue(),
                     GroupInviteLinkUrl.fromUri((String) group.get("GroupInviteLink").getValue()),
                     ((List<String>) group.get("Members").getValue()).stream()
-                            .map(m -> new RecipientAddress(m))
+                            .map(m -> new GroupMember(new RecipientAddress(m), admins.contains(m), null, null))
                             .collect(Collectors.toSet()),
                     ((List<String>) group.get("PendingMembers").getValue()).stream()
-                            .map(m -> new RecipientAddress(m))
+                            .map(RecipientAddress::new)
                             .collect(Collectors.toSet()),
                     ((List<String>) group.get("RequestingMembers").getValue()).stream()
-                            .map(m -> new RecipientAddress(m))
-                            .collect(Collectors.toSet()),
-                    ((List<String>) group.get("Admins").getValue()).stream()
-                            .map(m -> new RecipientAddress(m))
+                            .map(RecipientAddress::new)
                             .collect(Collectors.toSet()),
                     ((List<String>) group.get("Banned").getValue()).stream()
-                            .map(m -> new RecipientAddress(m))
+                            .map(RecipientAddress::new)
                             .collect(Collectors.toSet()),
                     (boolean) group.get("IsBlocked").getValue(),
                     (int) group.get("MessageExpirationTimer").getValue(),
@@ -977,7 +1010,10 @@ public class DbusManagerImpl implements Manager {
                                 Optional.empty(),
                                 getMentions(extras),
                                 List.of(),
-                                List.of())),
+                                List.of(),
+                                Optional.empty(),
+                                Optional.empty(),
+                                Optional.empty())),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
@@ -1023,7 +1059,10 @@ public class DbusManagerImpl implements Manager {
                                         Optional.empty(),
                                         getMentions(extras),
                                         List.of(),
-                                        List.of()))),
+                                        List.of(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty()))),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty());
@@ -1101,7 +1140,10 @@ public class DbusManagerImpl implements Manager {
                                         Optional.empty(),
                                         getMentions(extras),
                                         List.of(),
-                                        List.of())),
+                                        List.of(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty())),
                                 Optional.empty(),
                                 Optional.empty())),
                                 Optional.empty(),

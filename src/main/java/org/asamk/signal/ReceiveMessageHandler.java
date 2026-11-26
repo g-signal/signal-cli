@@ -214,6 +214,21 @@ public class ReceiveMessageHandler implements Manager.ReceiveMessageHandler {
             final var pollTerminate = message.pollTerminate().get();
             writer.println("Poll Terminate: {}", DateUtils.formatTimestamp(pollTerminate.targetSentTimestamp()));
         }
+        if (message.pinMessage().isPresent()) {
+            writer.println("Pin Message:");
+            final var pinMessage = message.pinMessage().get();
+            printPinMessage(writer.indentedWriter(), pinMessage);
+        }
+        if (message.unpinMessage().isPresent()) {
+            writer.println("Unpin Message:");
+            final var unpinMessage = message.unpinMessage().get();
+            printUnpinMessage(writer.indentedWriter(), unpinMessage);
+        }
+        if (message.adminDelete().isPresent()) {
+            writer.println("Admin Delete:");
+            final var adminDelete = message.adminDelete().get();
+            printAdminDelete(writer.indentedWriter(), adminDelete);
+        }
     }
 
     private void printEditMessage(PlainTextWriter writer, MessageEnvelope.Edit message) {
@@ -618,6 +633,29 @@ public class ReceiveMessageHandler implements Manager.ReceiveMessageHandler {
                 writer.println("Stored plaintext in: {}", file);
             }
         }
+    }
+
+    private void printPinMessage(final PlainTextWriter writer, final MessageEnvelope.Data.PinMessage pinMessage) {
+        writer.println("Target author: {}", formatContact(pinMessage.targetAuthor()));
+        writer.println("Target timestamp: {}", DateUtils.formatTimestamp(pinMessage.targetSentTimestamp()));
+        final var duration = pinMessage.pinDurationSeconds();
+        if (duration == -1) {
+            writer.println("Duration: forever");
+        } else if (duration == 0) {
+            writer.println("Duration: unspecified");
+        } else {
+            writer.println("Duration: {} seconds", duration);
+        }
+    }
+
+    private void printUnpinMessage(final PlainTextWriter writer, final MessageEnvelope.Data.UnpinMessage unpinMessage) {
+        writer.println("Target author: {}", formatContact(unpinMessage.targetAuthor()));
+        writer.println("Target timestamp: {}", DateUtils.formatTimestamp(unpinMessage.targetSentTimestamp()));
+    }
+
+    private void printAdminDelete(final PlainTextWriter writer, final MessageEnvelope.Data.AdminDelete adminDelete) {
+        writer.println("Target author: {}", formatContact(adminDelete.targetAuthor()));
+        writer.println("Target timestamp: {}", DateUtils.formatTimestamp(adminDelete.targetSentTimestamp()));
     }
 
     private String formatContact(RecipientAddress address) {

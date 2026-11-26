@@ -262,6 +262,10 @@ Only works, if this is the primary device.
 Specify the uri contained in the QR code shown by the new device.
 You will need the full URI such as "sgnl://linkdevice?uuid=...&pub_key=..." (formerly "tsdevice:/?uuid=...") Make sure to enclose it in quotation marks for shells.
 
+=== listAccounts
+
+Show a list of registered accounts.
+
 === listDevices
 
 Show a list of linked devices.
@@ -286,6 +290,27 @@ One or more numbers to check.
 
 [--username [USERNAME ...]]::
 One or more usernames or username links to check.
+
+=== sendAdminDelete
+
+Send admin delete message for a previously received or sent message.
+Admin delete is used by group admins to remove messages from all group members.
+Only works with group recipients.
+
+*-g* GROUP, *--group-id* GROUP::
+Specify the recipient group ID in base64 encoding (required).
+
+*--notify-self*::
+If self is part of recipients/groups send a normal message, not a sync message.
+
+*-a* RECIPIENT, *--target-author* RECIPIENT::
+Specify the number of the author of the message to admin delete.
+
+*-t* TIMESTAMP, *--target-timestamp* TIMESTAMP::
+Specify the timestamp of the message to admin delete.
+
+*--story*::
+Admin delete a story instead of a normal message.
 
 === send
 
@@ -385,6 +410,10 @@ Clear session state and send end session message.
 *--edit-timestamp*::
 Specify the timestamp of a previous message with the recipient or group to send an edited message.
 
+*--no-urgent*::
+Send the message without the urgent flag, so no push notification is triggered for the recipient.
+The message will still be delivered in real-time if the recipient's app is active.
+
 === sendPollCreate
 
 Send a poll create message to another user or group.
@@ -413,6 +442,7 @@ By default, recipients can select multiple options.
 
 *-o* OPTION [OPTION ...], *--option* OPTION [OPTION ...]*::
 The options for the poll.
+Between 2 and 10 options must be specified.
 
 === sendPollVote
 
@@ -497,6 +527,60 @@ The base64 encoded receipt blob.
 *--note* NOTE::
 Specify a note for the payment notification.
 
+=== sendPinMessage
+
+Send pin message for a previously received or sent message.
+
+RECIPIENT::
+Specify the recipients.
+
+*-g* GROUP, *--group-id* GROUP::
+Specify the recipient group ID in base64 encoding.
+
+*-u* USERNAME, *--username* USERNAME::
+Specify the recipient username or username link.
+
+*--note-to-self*::
+Send the pin message to self.
+
+*--notify-self*::
+If self is part of recipients/groups send a normal message, not a sync message.
+
+*-d* DURATION, *--pin-duration* DURATION::
+Specify the pin duration in seconds.
+Use -1 for forever (default: -1).
+
+*-a* RECIPIENT, *--target-author* RECIPIENT::
+Specify the number of the author of the message to pin.
+
+*-t* TIMESTAMP, *--target-timestamp* TIMESTAMP::
+Specify the timestamp of the message to pin.
+
+=== sendUnpinMessage
+
+Send unpin message for a previously received or sent message.
+
+RECIPIENT::
+Specify the recipients.
+
+*-g* GROUP, *--group-id* GROUP::
+Specify the recipient group ID in base64 encoding.
+
+*-u* USERNAME, *--username* USERNAME::
+Specify the recipient username or username link.
+
+*--note-to-self*::
+Send the unpin message to self.
+
+*--notify-self*::
+If self is part of recipients/groups send a normal message, not a sync message.
+
+*-a* RECIPIENT, *--target-author* RECIPIENT::
+Specify the number of the author of the message to unpin.
+
+*-t* TIMESTAMP, *--target-timestamp* TIMESTAMP::
+Specify the timestamp of the message to unpin.
+
 === sendReaction
 
 Send reaction to a previously received or sent message.
@@ -509,6 +593,12 @@ Specify the recipient group ID in base64 encoding.
 
 *-u* USERNAME, *--username* USERNAME::
 Specify the recipient username or username link.
+
+*--note-to-self*::
+Send the reaction to self.
+
+*--notify-self*::
+If self is part of recipients/groups send a normal message, not a sync message.
 
 *-e* EMOJI, *--emoji* EMOJI::
 Specify the emoji, should be a single unicode grapheme cluster.
@@ -531,6 +621,9 @@ Send a read or viewed receipt to a previously received message.
 
 RECIPIENT::
 Specify the sender.
+
+*-u* USERNAME, *--username* USERNAME::
+Specify the recipient username or username link.
 
 *-t* TIMESTAMP, *--target-timestamp* TIMESTAMP::
 Specify the timestamp of the message to which to react.
@@ -578,7 +671,7 @@ In json mode this is outputted as one json object per line.
 Number of seconds to wait for new messages (negative values disable timeout).
 Default is 5 seconds.
 
-*--max-messages*::
+*--max-messages* MAX_MESSAGES::
 Maximum number of messages to receive, before returning.
 
 *--ignore-attachments*::
@@ -586,6 +679,12 @@ Don’t download attachments of received messages.
 
 *--ignore-stories*::
 Don’t receive story messages from the server.
+
+*--ignore-avatars*::
+Don't download avatars of received messages.
+
+*--ignore-stickers*::
+Don't download sticker packs of received messages.
 
 
 *--send-read-receipts*::
@@ -655,6 +754,12 @@ Groups where only admins can send messages are also called announcement groups
 Set expiration time of messages (seconds).
 To disable expiration set expiration time to 0.
 
+*--member-label-emoji* EMOJI::
+Specify the emoji for the member label.
+
+*--member-label* STRING::
+Specify the string for the member label.
+
 === quitGroup
 
 Send a quit group message to all group members and remove self from member list.
@@ -696,10 +801,10 @@ Find contacts with the given contact or profile name.
 
 *--detailed*::
 List the contacts with more details.
-If output=json, then this is always set
+If output=json, then this is always set.
 
 *--internal*::
-Include internal information that's normally not user visible
+Include internal information that's normally not user visible.
 
 === listIdentities
 
@@ -779,6 +884,18 @@ New note.
 *-e*, *--expiration* EXPIRATION_SECONDS::
 Set expiration time of messages (seconds).
 To disable expiration set expiration time to 0.
+
+=== updateDevice
+
+Update a linked device.
+Only works, if this is the primary device.
+
+*-d* DEVICE_ID, *--device-id* DEVICE_ID::
+Specify the device you want to update.
+Use listDevices to see the deviceIds.
+
+*-n* NAME, *--device-name* NAME::
+Specify a name to describe the given device.
 
 === removeContact
 
@@ -950,6 +1067,12 @@ Don’t download attachments of received messages.
 *--ignore-stories*::
 Don’t receive story messages from the server.
 
+*--ignore-avatars*::
+Don't download avatars of received messages.
+
+*--ignore-stickers*::
+Don't download sticker packs of received messages.
+
 *--send-read-receipts*::
 Send read receipts for all incoming data messages (in addition to the default delivery receipts)
 
@@ -971,6 +1094,12 @@ Don’t download attachments of received messages.
 *--ignore-stories*::
 Don’t receive story messages from the server.
 
+*--ignore-avatars*::
+Don't download avatars of received messages.
+
+*--ignore-stickers*::
+Don't download sticker packs of received messages.
+
 *--send-read-receipts*::
 Send read receipts for all incoming data messages (in addition to the default delivery receipts)
 
@@ -988,6 +1117,10 @@ The challenge token from the failed send attempt.
 
 *--captcha* CAPTCHA::
 The captcha result, starting with signalcaptcha://
+
+=== version
+
+Show version information.
 
 == Examples
 

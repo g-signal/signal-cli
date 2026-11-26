@@ -981,7 +981,7 @@ public class RecipientStore implements RecipientIdCreator, RecipientResolver, Re
             if (registered) {
                 markRegistered(connection, recipientId);
             } else {
-                markUnregistered(connection, recipientId);
+                markUnregisteredAndSplitIfNecessary(connection, recipientId);
             }
             connection.commit();
         } catch (SQLException e) {
@@ -1549,6 +1549,7 @@ public class RecipientStore implements RecipientIdCreator, RecipientResolver, Re
                 getExpiringProfileKeyCredentialFromResultSet(resultSet),
                 getProfileFromResultSet(resultSet),
                 getDiscoverableFromResultSet(resultSet),
+                getUnregisteredTimestampFromResultSet(resultSet),
                 getStorageRecordFromResultSet(resultSet));
     }
 
@@ -1574,6 +1575,14 @@ public class RecipientStore implements RecipientIdCreator, RecipientResolver, Re
 
     private static Boolean getDiscoverableFromResultSet(final ResultSet resultSet) throws SQLException {
         final var discoverable = resultSet.getBoolean("discoverable");
+        if (resultSet.wasNull()) {
+            return null;
+        }
+        return discoverable;
+    }
+
+    private static Long getUnregisteredTimestampFromResultSet(final ResultSet resultSet) throws SQLException {
+        final var discoverable = resultSet.getLong("unregistered_timestamp");
         if (resultSet.wasNull()) {
             return null;
         }

@@ -33,7 +33,7 @@ import static org.signal.core.util.StringExtensionsKt.emptyIfNull;
 
 public final class StorageSyncModels {
 
-    private final static boolean useBinaryId = false;
+    private final static boolean useBinaryId = true;
     private final static boolean useStringId = true;
 
     private StorageSyncModels() {
@@ -100,7 +100,7 @@ public final class StorageSyncModels {
                         : ByteString.of(recipient.getProfileKey().serialize()));
         if (useBinaryId) {
             builder.aciBinary(address.aci().map(ACI::toByteString).orElse(ByteString.EMPTY))
-                    .pniBinary(address.pni().map(PNI::toByteString).orElse(ByteString.EMPTY));
+                    .pniBinary(address.pni().map(PNI::toByteStringWithoutPrefix).orElse(ByteString.EMPTY));
         }
         if (useStringId) {
             builder.aci(address.aci().map(ACI::toString).orElse(""))

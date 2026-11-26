@@ -213,6 +213,17 @@
       ]
     },
     {
+      "type": "com.sun.crypto.provider.HKDFKeyDerivation$HKDFSHA384",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "javax.crypto.KDFParameters"
+          ]
+        }
+      ]
+    },
+    {
       "type": "com.sun.crypto.provider.HmacCore$HmacSHA256",
       "methods": [
         {
@@ -305,6 +316,14 @@
         },
         {
           "name": "getCredentials",
+          "parameterTypes": []
+        },
+        {
+          "name": "getCredentialsProvider",
+          "parameterTypes": []
+        },
+        {
+          "name": "getCredentialsProviderClassName",
           "parameterTypes": []
         },
         {
@@ -493,6 +512,18 @@
           "name": "setCredentials",
           "parameterTypes": [
             "com.zaxxer.hikari.util.Credentials"
+          ]
+        },
+        {
+          "name": "setCredentialsProvider",
+          "parameterTypes": [
+            "com.zaxxer.hikari.HikariCredentialsProvider"
+          ]
+        },
+        {
+          "name": "setCredentialsProviderClassName",
+          "parameterTypes": [
+            "java.lang.String"
           ]
         },
         {
@@ -931,6 +962,10 @@
         {
           "name": "getStackTrace",
           "parameterTypes": []
+        },
+        {
+          "name": "isVirtual",
+          "parameterTypes": []
         }
       ]
     },
@@ -975,6 +1010,9 @@
           ]
         }
       ]
+    },
+    {
+      "type": "java.lang.VirtualThread"
     },
     {
       "type": "java.lang.annotation.Retention",
@@ -1259,22 +1297,17 @@
       "allDeclaredFields": true,
       "allDeclaredMethods": true,
       "allDeclaredConstructors": true,
+      "jniAccessible": true
+    },
+    {
+      "type": "java.util.concurrent.CancellationException",
       "jniAccessible": true,
       "methods": [
         {
           "name": "<init>",
           "parameterTypes": [
-            "long",
-            "long"
+            "java.lang.String"
           ]
-        },
-        {
-          "name": "getLeastSignificantBits",
-          "parameterTypes": []
-        },
-        {
-          "name": "getMostSignificantBits",
-          "parameterTypes": []
         }
       ]
     },
@@ -1861,6 +1894,12 @@
       ]
     },
     {
+      "type": "org.asamk.Signal.Error$Failure"
+    },
+    {
+      "type": "org.asamk.Signal.Error.Failure"
+    },
+    {
       "type": "org.asamk.SignalControl",
       "allDeclaredMethods": true
     },
@@ -1876,9 +1915,30 @@
       ]
     },
     {
+      "type": "org.asamk.SignalControl$Error$InvalidNumber",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.asamk.SignalControl.Error$InvalidNumber"
+    },
+    {
+      "type": "org.asamk.SignalControl.Error.InvalidNumber"
+    },
+    {
       "type": "org.asamk.signal.Main",
       "jniAccessible": true,
       "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
         {
           "name": "main",
           "parameterTypes": [
@@ -1987,6 +2047,19 @@
       "allDeclaredFields": true,
       "allDeclaredMethods": true,
       "allDeclaredConstructors": true
+    },
+    {
+      "type": "org.asamk.signal.commands.ListGroupsCommand$JsonGroupMemberAddress",
+      "methods": [
+        {
+          "name": "number",
+          "parameterTypes": []
+        },
+        {
+          "name": "uuid",
+          "parameterTypes": []
+        }
+      ]
     },
     {
       "type": "org.asamk.signal.commands.ListIdentitiesCommand$JsonIdentity",
@@ -2164,6 +2237,27 @@
     },
     {
       "type": "org.asamk.signal.dbus.DbusSignalImpl$DbusSignalIdentityImpl"
+    },
+    {
+      "type": "org.asamk.signal.json.JsonAdminDelete",
+      "methods": [
+        {
+          "name": "targetAuthor",
+          "parameterTypes": []
+        },
+        {
+          "name": "targetAuthorNumber",
+          "parameterTypes": []
+        },
+        {
+          "name": "targetAuthorUuid",
+          "parameterTypes": []
+        },
+        {
+          "name": "targetSentTimestamp",
+          "parameterTypes": []
+        }
+      ]
     },
     {
       "type": "org.asamk.signal.json.JsonAttachment",
@@ -2518,6 +2612,31 @@
       ]
     },
     {
+      "type": "org.asamk.signal.json.JsonPinMessage",
+      "methods": [
+        {
+          "name": "pinDurationSeconds",
+          "parameterTypes": []
+        },
+        {
+          "name": "targetAuthor",
+          "parameterTypes": []
+        },
+        {
+          "name": "targetAuthorNumber",
+          "parameterTypes": []
+        },
+        {
+          "name": "targetAuthorUuid",
+          "parameterTypes": []
+        },
+        {
+          "name": "targetSentTimestamp",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "org.asamk.signal.json.JsonPollCreate",
       "allDeclaredFields": true,
       "methods": [
@@ -2866,6 +2985,27 @@
       "allDeclaredFields": true,
       "allDeclaredMethods": true,
       "allDeclaredConstructors": true
+    },
+    {
+      "type": "org.asamk.signal.json.JsonUnpinMessage",
+      "methods": [
+        {
+          "name": "targetAuthor",
+          "parameterTypes": []
+        },
+        {
+          "name": "targetAuthorNumber",
+          "parameterTypes": []
+        },
+        {
+          "name": "targetAuthorUuid",
+          "parameterTypes": []
+        },
+        {
+          "name": "targetSentTimestamp",
+          "parameterTypes": []
+        }
+      ]
     },
     {
       "type": "org.asamk.signal.jsonrpc.JsonRpcBatchMessage",
@@ -4517,6 +4657,33 @@
       ]
     },
     {
+      "type": "org.bouncycastle.jcajce.provider.kdf.HKDF$Mappings",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.bouncycastle.jcajce.provider.kdf.PBEPBKDF2$Mappings",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.bouncycastle.jcajce.provider.kdf.SCRYPT$Mappings",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "org.bouncycastle.jcajce.provider.keystore.BC$Mappings",
       "methods": [
         {
@@ -4701,6 +4868,15 @@
     },
     {
       "type": "org.bouncycastle.jcajce.provider.symmetric.HC256$Mappings",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.bouncycastle.jcajce.provider.symmetric.HKDF$Mappings",
       "methods": [
         {
           "name": "<init>",
@@ -5089,6 +5265,9 @@
       "allPublicConstructors": true
     },
     {
+      "type": "org.freedesktop.dbus.transport.jre.NativeTransportProvider"
+    },
+    {
       "type": "org.graalvm.jniutils.JNIExceptionWrapperEntryPoints",
       "jniAccessible": true,
       "methods": [
@@ -5145,6 +5324,59 @@
           "name": "token_"
         }
       ]
+    },
+    {
+      "type": "org.signal.core.models.ServiceId",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.signal.libsignal.protocol.ServiceId"
+          ]
+        },
+        {
+          "name": "equals",
+          "parameterTypes": [
+            "java.lang.Object"
+          ]
+        },
+        {
+          "name": "hashCode",
+          "parameterTypes": []
+        },
+        {
+          "name": "logString",
+          "parameterTypes": []
+        },
+        {
+          "name": "toByteArray",
+          "parameterTypes": []
+        },
+        {
+          "name": "toByteString",
+          "parameterTypes": []
+        },
+        {
+          "name": "toProtocolAddress",
+          "parameterTypes": [
+            "int"
+          ]
+        },
+        {
+          "name": "toString",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.signal.core.models.ServiceId$ACI"
+    },
+    {
+      "type": "org.signal.core.models.ServiceId$Companion"
+    },
+    {
+      "type": "org.signal.core.models.ServiceId$PNI"
     },
     {
       "type": "org.signal.libsignal.internal.CompletableFuture",
@@ -5215,6 +5447,12 @@
       "jniAccessible": true,
       "methods": [
         {
+          "name": "connectionInterrupted",
+          "parameterTypes": [
+            "java.lang.Throwable"
+          ]
+        },
+        {
           "name": "onConnectionInterrupted",
           "parameterTypes": [
             "java.lang.Throwable"
@@ -5237,6 +5475,24 @@
           "parameterTypes": [
             "java.lang.String[]"
           ]
+        },
+        {
+          "name": "receivedAlerts",
+          "parameterTypes": [
+            "java.lang.String[]"
+          ]
+        },
+        {
+          "name": "receivedIncomingMessage",
+          "parameterTypes": [
+            "byte[]",
+            "long",
+            "long"
+          ]
+        },
+        {
+          "name": "receivedQueueEmpty",
+          "parameterTypes": []
         }
       ]
     },
@@ -5280,6 +5536,18 @@
       ]
     },
     {
+      "type": "org.signal.libsignal.net.ChatServiceInactiveException",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
       "type": "org.signal.libsignal.net.DeviceDeregisteredException",
       "jniAccessible": true,
       "methods": [
@@ -5311,6 +5579,18 @@
           "name": "<init>",
           "parameterTypes": [
             "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.signal.libsignal.net.TransportFailureException",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String"
           ]
         }
       ]
@@ -5405,6 +5685,36 @@
     {
       "type": "org.signal.libsignal.protocol.ServiceId",
       "allDeclaredFields": true
+    },
+    {
+      "type": "org.signal.libsignal.protocol.SessionCipher$1",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "loadPreKey",
+          "parameterTypes": [
+            "int"
+          ]
+        },
+        {
+          "name": "removePreKey",
+          "parameterTypes": [
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.signal.libsignal.protocol.SessionCipher$2",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "loadSignedPreKey",
+          "parameterTypes": [
+            "int"
+          ]
+        }
+      ]
     },
     {
       "type": "org.signal.libsignal.protocol.SignalProtocolAddress",
@@ -5650,6 +5960,14 @@
     {
       "type": "org.signal.libsignal.protocol.state.SignedPreKeyStore",
       "allDeclaredMethods": true,
+      "jniAccessible": true
+    },
+    {
+      "type": "org.signal.libsignal.protocol.state.internal.PreKeyStore",
+      "jniAccessible": true
+    },
+    {
+      "type": "org.signal.libsignal.protocol.state.internal.SignedPreKeyStore",
       "jniAccessible": true
     },
     {
@@ -6832,6 +7150,22 @@
       ]
     },
     {
+      "type": "org.whispersystems.signalservice.api.link.SetDeviceNameRequest",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "getDeviceName",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "org.whispersystems.signalservice.api.messages.calls.HangupMessage",
       "allDeclaredFields": true,
       "allDeclaredMethods": true,
@@ -6894,7 +7228,7 @@
       "allDeclaredFields": true
     },
     {
-      "type": "org.signal.core.models.ServiceId",
+      "type": "org.whispersystems.signalservice.api.push.ServiceId",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -7471,6 +7805,18 @@
     },
     {
       "type": "org.whispersystems.signalservice.internal.push.GroupMismatchedDevices[]"
+    },
+    {
+      "type": "org.whispersystems.signalservice.internal.push.GroupPatchResponse",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Integer",
+            "java.lang.String"
+          ]
+        }
+      ]
     },
     {
       "type": "org.whispersystems.signalservice.internal.push.GroupStaleDevices",
@@ -9215,6 +9561,27 @@
       "type": "sun.text.resources.BreakIteratorResources"
     },
     {
+      "type": "sun.text.resources.BreakIteratorResources_en"
+    },
+    {
+      "type": "sun.text.resources.BreakIteratorResources_en_US"
+    },
+    {
+      "type": "sun.text.resources.CollationData"
+    },
+    {
+      "type": "sun.text.resources.FormatData"
+    },
+    {
+      "type": "sun.text.resources.FormatData_en"
+    },
+    {
+      "type": "sun.text.resources.FormatData_en_US"
+    },
+    {
+      "type": "sun.text.resources.JavaTimeSupplementary"
+    },
+    {
       "type": "sun.text.resources.cldr.FormatData"
     },
     {
@@ -9227,11 +9594,217 @@
       "type": "sun.util.resources.cldr.CalendarData"
     },
     {
+      "type": "sun.util.resources.cldr.TimeZoneNames"
+    },
+    {
+      "type": "sun.util.resources.cldr.TimeZoneNames_en"
+    },
+    {
+      "type": "sun.util.resources.cldr.TimeZoneNames_en_US"
+    },
+    {
       "type": {
         "proxy": [
           "java.sql.Connection"
         ]
       }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.asamk.Signal"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.asamk.Signal$Device"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.asamk.Signal$Group"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.asamk.Signal$Identity"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.asamk.SignalControl"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.freedesktop.dbus.interfaces.DBus"
+        ]
+      }
+    }
+  ],
+  "resources": [
+    {
+      "glob": "*signal_jni.*"
+    },
+    {
+      "glob": "*signal_jni_aarch64.*"
+    },
+    {
+      "glob": "*signal_jni_amd64.*"
+    },
+    {
+      "glob": "META-INF/maven/org.xerial/sqlite-jdbc/pom.properties"
+    },
+    {
+      "glob": "META-INF/services/ch.qos.logback.classic.spi.Configurator"
+    },
+    {
+      "glob": "META-INF/services/com.sun.net.httpserver.spi.HttpServerProvider"
+    },
+    {
+      "glob": "META-INF/services/java.net.spi.InetAddressResolverProvider"
+    },
+    {
+      "glob": "META-INF/services/java.net.spi.URLStreamHandlerProvider"
+    },
+    {
+      "glob": "META-INF/services/java.nio.channels.spi.SelectorProvider"
+    },
+    {
+      "glob": "META-INF/services/java.nio.file.spi.FileTypeDetector"
+    },
+    {
+      "glob": "META-INF/services/java.sql.Driver"
+    },
+    {
+      "glob": "META-INF/services/java.time.zone.ZoneRulesProvider"
+    },
+    {
+      "glob": "META-INF/services/java.util.spi.ResourceBundleControlProvider"
+    },
+    {
+      "glob": "META-INF/services/kotlin.reflect.jvm.internal.impl.resolve.ExternalOverridabilityCondition"
+    },
+    {
+      "glob": "META-INF/services/kotlin.reflect.jvm.internal.impl.util.ModuleVisibilityHelper"
+    },
+    {
+      "glob": "META-INF/services/org.freedesktop.dbus.spi.message.ISocketProvider"
+    },
+    {
+      "glob": "META-INF/services/org.freedesktop.dbus.spi.transport.ITransportProvider"
+    },
+    {
+      "glob": "META-INF/services/org.slf4j.spi.SLF4JServiceProvider"
+    },
+    {
+      "glob": "ch/qos/logback/classic/logback-classic-version.properties"
+    },
+    {
+      "glob": "ch/qos/logback/core/logback-core-version.properties"
+    },
+    {
+      "glob": "com/google/i18n/phonenumbers/data/PhoneNumberMetadataProto_*"
+    },
+    {
+      "glob": "com/google/i18n/phonenumbers/data/PhoneNumberMetadataProto_AG"
+    },
+    {
+      "glob": "com/google/i18n/phonenumbers/data/PhoneNumberMetadataProto_AI"
+    },
+    {
+      "glob": "com/google/i18n/phonenumbers/data/PhoneNumberMetadataProto_AS"
+    },
+    {
+      "glob": "com/google/i18n/phonenumbers/data/PhoneNumberMetadataProto_BB"
+    },
+    {
+      "glob": "com/google/i18n/phonenumbers/data/PhoneNumberMetadataProto_BM"
+    },
+    {
+      "glob": "com/google/i18n/phonenumbers/data/PhoneNumberMetadataProto_BS"
+    },
+    {
+      "glob": "com/google/i18n/phonenumbers/data/PhoneNumberMetadataProto_CA"
+    },
+    {
+      "glob": "com/google/i18n/phonenumbers/data/PhoneNumberMetadataProto_DE"
+    },
+    {
+      "glob": "com/google/i18n/phonenumbers/data/PhoneNumberMetadataProto_US"
+    },
+    {
+      "glob": "kotlin/collections/collections.kotlin_builtins"
+    },
+    {
+      "glob": "kotlin/kotlin.kotlin_builtins"
+    },
+    {
+      "glob": "libsignal_jni_amd64.so"
+    },
+    {
+      "glob": "net/sourceforge/argparse4j/internal/ArgumentParserImpl.properties"
+    },
+    {
+      "glob": "net/sourceforge/argparse4j/internal/ArgumentParserImpl_*.properties"
+    },
+    {
+      "glob": "net/sourceforge/argparse4j/internal/ArgumentParserImpl_en.properties"
+    },
+    {
+      "glob": "net/sourceforge/argparse4j/internal/ArgumentParserImpl_en_US.properties"
+    },
+    {
+      "glob": "net/sourceforge/argparse4j/internal/ArgumentParserImpl_fr.properties"
+    },
+    {
+      "glob": "net/sourceforge/argparse4j/internal/ArgumentParserImpl_fr_FR.properties"
+    },
+    {
+      "glob": "org/asamk/signal/manager/config/whisper.store"
+    },
+    {
+      "glob": "org/slf4j/impl/StaticLoggerBinder.class"
+    },
+    {
+      "glob": "org/sqlite/native/Linux/x86_64/libsqlitejdbc.so"
+    },
+    {
+      "module": "java.base",
+      "glob": "jdk/internal/icu/impl/data/icudt76b/nfc.nrm"
+    },
+    {
+      "module": "java.base",
+      "glob": "jdk/internal/icu/impl/data/icudt76b/nfkc.nrm"
+    },
+    {
+      "module": "java.base",
+      "glob": "jdk/internal/icu/impl/data/icudt76b/uprops.icu"
+    },
+    {
+      "module": "java.base",
+      "glob": "sun/net/idn/uidna.spp"
+    },
+    {
+      "module": "java.base",
+      "glob": "sun/net/www/content-types.properties"
+    },
+    {
+      "module": "java.base",
+      "glob": "sun/text/resources/LineBreakIteratorData"
+    },
+    {
+      "bundle": "net.sourceforge.argparse4j.internal.ArgumentParserImpl"
     }
   ]
 }

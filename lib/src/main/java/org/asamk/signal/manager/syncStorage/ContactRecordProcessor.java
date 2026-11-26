@@ -31,6 +31,7 @@ import java.util.regex.Pattern;
 import okio.ByteString;
 
 import static org.asamk.signal.manager.util.Utils.firstNonEmpty;
+import static org.asamk.signal.manager.util.Utils.firstNonNull;
 import static org.asamk.signal.manager.util.Utils.nullIfEmpty;
 
 public class ContactRecordProcessor extends DefaultStorageRecordProcessor<SignalContactRecord> {
@@ -129,27 +130,32 @@ public class ContactRecordProcessor extends DefaultStorageRecordProcessor<Signal
             identityKey = local.identityKey.size() > 0 ? local.identityKey : ByteString.EMPTY;
         }
 
-        if ((!local.aci.isEmpty() || local.aciBinary.size() > 0)
+        final var localAci = ACI.parseOrNull(local.aci, local.aciBinary);
+        final var localPni = PNI.parseOrNull(local.pni, local.pniBinary);
+        final var remoteAci = ACI.parseOrNull(remote.aci, remote.aciBinary);
+        final var remotePni = PNI.parseOrNull(remote.pni, remote.pniBinary);
+
+        if (localAci != null
                 && local.identityKey.size() > 0
                 && remote.identityKey.size() > 0
                 && !local.identityKey.equals(remote.identityKey)) {
             logger.debug("The local and remote identity keys do not match for {}. Enqueueing a profile fetch.",
-                    local.aci);
+                    localAci);
             final var address = getRecipientAddress(local);
             jobExecutor.enqueueJob(new DownloadProfileJob(address));
         }
 
-        String pni;
+        PNI pni;
         String e164;
         if (account.isPrimaryDevice()) {
             final var e164sMatchButPnisDont = !local.e164.isEmpty()
                     && local.e164.equals(remote.e164)
-                    && !local.pni.isEmpty()
-                    && !remote.pni.isEmpty()
-                    && !local.pni.equals(remote.pni);
+                    && localPni != null
+                    && remotePni != null
+                    && !localPni.equals(remotePni);
 
-            final var pnisMatchButE164sDont = !local.pni.isEmpty()
-                    && local.pni.equals(remote.pni)
+            final var pnisMatchButE164sDont = localPni != null
+                    && localPni.equals(remotePni)
                     && !local.e164.isEmpty()
                     && !remote.e164.isEmpty()
                     && !local.e164.equals(remote.e164);
@@ -161,14 +167,14 @@ public class ContactRecordProcessor extends DefaultStorageRecordProcessor<Signal
                     logger.debug("Matching PNIs, but the E164s differ! Trusting our local pair.");
                 }
                 jobExecutor.enqueueJob(new RefreshRecipientsJob());
-                pni = local.pni;
+                pni = localPni;
                 e164 = local.e164;
             } else {
-                pni = firstNonEmpty(remote.pni, local.pni);
+                pni = firstNonNull(remotePni, localPni);
                 e164 = firstNonEmpty(remote.e164, local.e164);
             }
         } else {
-            pni = firstNonEmpty(remote.pni, local.pni);
+            pni = firstNonNull(remotePni, localPni);
             e164 = firstNonEmpty(remote.e164, local.e164);
         }
 
@@ -177,11 +183,7 @@ public class ContactRecordProcessor extends DefaultStorageRecordProcessor<Signal
                 ? ByteString.EMPTY
                 : remote.profileKey;
         final var mergedBuilder = remote.newBuilder()
-                .aci(local.aci.isEmpty() ? remote.aci : local.aci)
-                .aciBinary(firstNonEmpty(local.aciBinary, remote.aciBinary))
                 .e164(e164)
-                .pni(pni)
-                .pniBinary(pni.isEmpty() ? ByteString.EMPTY : PNI.parseOrThrow(pni).toByteStringWithoutPrefix())
                 .givenName(profileGivenName)
                 .familyName(profileFamilyName)
                 .systemGivenName(account.isPrimaryDevice() ? local.systemGivenName : remote.systemGivenName)
@@ -203,6 +205,28 @@ public class ContactRecordProcessor extends DefaultStorageRecordProcessor<Signal
                 .nickname(remote.nickname)
                 .note(remote.note)
                 .avatarColor(remote.avatarColor);
+        if (remote.aci.isEmpty() && remote.aciBinary.size() == 0) {
+            mergedBuilder.aci(localAci == null ? remote.aci : localAci.toString())
+                    .aciBinary(localAci == null ? remote.aciBinary : localAci.toByteString());
+        } else {
+            if (!remote.aci.isEmpty()) {
+                mergedBuilder.aci(localAci == null ? remote.aci : localAci.toString());
+            }
+            if (remote.aciBinary.size() > 0) {
+                mergedBuilder.aciBinary(localAci == null ? remote.aciBinary : localAci.toByteString());
+            }
+        }
+        if (remote.pni.isEmpty() && remote.pniBinary.size() == 0) {
+            mergedBuilder.pni(pni == null ? "" : pni.toStringWithoutPrefix())
+                    .pniBinary(pni == null ? ByteString.EMPTY : pni.toByteStringWithoutPrefix());
+        } else {
+            if (!remote.pni.isEmpty()) {
+                mergedBuilder.pni(pni == null ? "" : pni.toStringWithoutPrefix());
+            }
+            if (remote.pniBinary.size() > 0) {
+                mergedBuilder.pniBinary(pni == null ? ByteString.EMPTY : pni.toByteStringWithoutPrefix());
+            }
+        }
         final var merged = mergedBuilder.build();
 
         final var matchesRemote = doProtosMatch(merged, remote);
@@ -337,15 +361,16 @@ public class ContactRecordProcessor extends DefaultStorageRecordProcessor<Signal
     public int compare(SignalContactRecord lhsRecord, SignalContactRecord rhsRecord) {
         final var lhs = lhsRecord.getProto();
         final var rhs = rhsRecord.getProto();
+        final var lhsAci = ACI.parseOrNull(lhs.aci, lhs.aciBinary);
+        final var rhsAci = ACI.parseOrNull(rhs.aci, rhs.aciBinary);
+        final var lhsPni = PNI.parseOrNull(lhs.pni, lhs.pniBinary);
+        final var rhsPni = PNI.parseOrNull(rhs.pni, rhs.pniBinary);
         if ((
-                (!lhs.aci.isEmpty() && Objects.equals(lhs.aci, rhs.aci)) || (
-                        lhs.aciBinary.size() != 0 && Objects.equals(lhs.aciBinary, rhs.aciBinary)
-                )
+                (lhsAci != null && Objects.equals(lhsAci, rhsAci))
         ) || (
                 !lhs.e164.isEmpty() && Objects.equals(lhs.e164, rhs.e164)
         ) || (
-                (!lhs.pni.isEmpty() && Objects.equals(lhs.pni, rhs.pni) && lhs.pniBinary == rhs.pniBinary)
-                        || (lhs.pniBinary.size() != 0 && Objects.equals(lhs.pniBinary, rhs.pniBinary))
+                (lhsPni != null && Objects.equals(lhsPni, rhsPni))
         )) {
             return 0;
         } else {

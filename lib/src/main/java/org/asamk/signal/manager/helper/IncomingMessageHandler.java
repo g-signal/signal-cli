@@ -35,6 +35,7 @@ import org.asamk.signal.manager.storage.groups.GroupInfoV1;
 import org.asamk.signal.manager.storage.recipients.RecipientAddress;
 import org.asamk.signal.manager.storage.recipients.RecipientId;
 import org.asamk.signal.manager.storage.stickers.StickerPack;
+import org.asamk.signal.manager.util.MimeUtils;
 import org.signal.core.models.ServiceId;
 import org.signal.core.models.ServiceId.ACI;
 import org.signal.libsignal.metadata.ProtocolInvalidKeyException;
@@ -70,8 +71,13 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.internal.push.Envelope;
 import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageException;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -200,7 +206,10 @@ public final class IncomingMessageHandler {
     ) throws ProtocolInvalidKeyException, ProtocolInvalidMessageException, UnsupportedDataMessageException, InvalidMessageStructureException {
         final var content = cipherResult.getContent();
         final var envelopeMetadata = cipherResult.getMetadata();
-        final var validationResult = EnvelopeContentValidator.INSTANCE.validate(envelope, content, account.getAci());
+        final var validationResult = EnvelopeContentValidator.INSTANCE.validate(envelope,
+                content,
+                account.getAci(),
+                cipherResult.getMetadata().getCiphertextMessageType());
 
         if (validationResult instanceof EnvelopeContentValidator.Result.Invalid v) {
             logger.warn("Invalid content! {}", v.getReason(), v.getThrowable());
@@ -254,7 +263,7 @@ public final class IncomingMessageHandler {
         var notAllowedToSendToGroup = isNotAllowedToSendToGroup(envelope, content);
         final var groupContext = getGroupContext(content);
         if (groupContext != null && groupContext.getGroupV2().isPresent()) {
-            handleGroupV2Context(groupContext.getGroupV2().get());
+            handleGroupV2Context(groupContext.getGroupV2().get(), receiveConfig.ignoreAvatars());
         }
         // Check again in case the user just joined the group
         notAllowedToSendToGroup = notAllowedToSendToGroup && isNotAllowedToSendToGroup(envelope, content);
@@ -270,13 +279,18 @@ public final class IncomingMessageHandler {
             return List.of();
         } else {
             List<HandleAction> actions;
+            Map<String, String> longTexts;
             if (content != null) {
-                actions = handleMessage(envelope, content, receiveConfig);
+                final var results = handleMessage(envelope, content, receiveConfig);
+                actions = results.first();
+                longTexts = results.second();
             } else {
                 actions = List.of();
+                longTexts = Map.of();
             }
             handler.handleMessage(MessageEnvelope.from(envelope,
                     content,
+                    longTexts,
                     account.getRecipientResolver(),
                     account.getRecipientAddressResolver(),
                     context.getAttachmentHelper()::getAttachmentFile,
@@ -285,12 +299,13 @@ public final class IncomingMessageHandler {
         }
     }
 
-    public List<HandleAction> handleMessage(
+    public Pair<List<HandleAction>, Map<String, String>> handleMessage(
             SignalServiceEnvelope envelope,
             SignalServiceContent content,
             ReceiveConfig receiveConfig
     ) {
-        var actions = new ArrayList<HandleAction>();
+        final var actions = new ArrayList<HandleAction>();
+        final var longTexts = new HashMap<String, String>();
         final var senderDeviceAddress = getSender(envelope, content);
         final var sender = senderDeviceAddress.recipientId();
         final var senderServiceId = senderDeviceAddress.serviceId();
@@ -365,27 +380,28 @@ public final class IncomingMessageHandler {
                         message.getTimestamp()));
             }
 
-            actions.addAll(handleSignalServiceDataMessage(message,
+            final var dataResults = handleSignalServiceDataMessage(message,
                     false,
                     senderDeviceAddress,
                     destination,
-                    receiveConfig.ignoreAttachments()));
+                    receiveConfig);
+            actions.addAll(dataResults.first());
+            longTexts.putAll(dataResults.second());
         }
 
         if (content.getStoryMessage().isPresent()) {
             final var message = content.getStoryMessage().get();
-            actions.addAll(handleSignalServiceStoryMessage(message, sender, receiveConfig.ignoreAttachments()));
+            actions.addAll(handleSignalServiceStoryMessage(message, sender, receiveConfig));
         }
 
         if (content.getSyncMessage().isPresent()) {
             var syncMessage = content.getSyncMessage().get();
-            actions.addAll(handleSyncMessage(envelope,
-                    syncMessage,
-                    senderDeviceAddress,
-                    receiveConfig.ignoreAttachments()));
+            final var syncResults = handleSyncMessage(envelope, syncMessage, senderDeviceAddress, receiveConfig);
+            actions.addAll(syncResults.first());
+            longTexts.putAll(syncResults.second());
         }
 
-        return actions;
+        return new Pair<>(actions, longTexts);
     }
 
     private boolean handlePniSignatureMessage(
@@ -471,19 +487,20 @@ public final class IncomingMessageHandler {
         }
     }
 
-    private List<HandleAction> handleSyncMessage(
+    private Pair<List<HandleAction>, Map<String, String>> handleSyncMessage(
             final SignalServiceEnvelope envelope,
             final SignalServiceSyncMessage syncMessage,
             final DeviceAddress sender,
-            final boolean ignoreAttachments
+            final ReceiveConfig receiveConfig
     ) {
-        var actions = new ArrayList<HandleAction>();
+        final var actions = new ArrayList<HandleAction>();
+        final var longTexts = new HashMap<String, String>();
         account.setMultiDevice(true);
         if (syncMessage.getSent().isPresent()) {
             var message = syncMessage.getSent().get();
             final var destination = message.getDestination().orElse(null);
             if (message.getDataMessage().isPresent()) {
-                actions.addAll(handleSignalServiceDataMessage(message.getDataMessage().get(),
+                final var dataResults = handleSignalServiceDataMessage(message.getDataMessage().get(),
                         true,
                         sender,
                         destination == null
@@ -491,12 +508,14 @@ public final class IncomingMessageHandler {
                                 : new DeviceAddress(account.getRecipientResolver().resolveRecipient(destination),
                                         destination.getServiceId(),
                                         0),
-                        ignoreAttachments));
+                        receiveConfig);
+                actions.addAll(dataResults.first());
+                longTexts.putAll(dataResults.second());
             }
             if (message.getStoryMessage().isPresent()) {
                 actions.addAll(handleSignalServiceStoryMessage(message.getStoryMessage().get(),
                         sender.recipientId(),
-                        ignoreAttachments));
+                        receiveConfig));
             }
         }
         if (syncMessage.getRequest().isPresent() && account.isPrimaryDevice()) {
@@ -522,7 +541,9 @@ public final class IncomingMessageHandler {
             try {
                 final var groupsMessage = syncMessage.getGroups().get();
                 context.getAttachmentHelper()
-                        .retrieveAttachment(groupsMessage, context.getSyncHelper()::handleSyncDeviceGroups);
+                        .retrieveAttachment(groupsMessage,
+                                input -> context.getSyncHelper()
+                                        .handleSyncDeviceGroups(input, receiveConfig.ignoreAvatars()));
             } catch (Exception e) {
                 logger.warn("Failed to handle received sync groups, ignoring: {}", e.getMessage());
             }
@@ -550,7 +571,8 @@ public final class IncomingMessageHandler {
                 final var contactsMessage = syncMessage.getContacts().get();
                 context.getAttachmentHelper()
                         .retrieveAttachment(contactsMessage.getContactsStream(),
-                                context.getSyncHelper()::handleSyncDeviceContacts);
+                                input -> context.getSyncHelper()
+                                        .handleSyncDeviceContacts(input, receiveConfig.ignoreAvatars()));
             } catch (Exception e) {
                 logger.warn("Failed to handle received sync contacts, ignoring: {}", e.getMessage());
             }
@@ -576,7 +598,7 @@ public final class IncomingMessageHandler {
                 final var sticker = context.getStickerHelper()
                         .addOrUpdateStickerPack(stickerPackId, stickerPackKey, installed);
 
-                if (sticker != null && installed) {
+                if (sticker != null && installed && !receiveConfig.ignoreStickers()) {
                     context.getJobExecutor().enqueueJob(new RetrieveStickerPackJob(stickerPackId, sticker.packKey()));
                 }
             }
@@ -640,7 +662,7 @@ public final class IncomingMessageHandler {
                 actions.add(RetrieveDeviceNameAction.create());
             }
         }
-        return actions;
+        return new Pair<>(actions, longTexts);
     }
 
     private SignalServiceGroupContext getGroupContext(SignalServiceContent content) {
@@ -706,15 +728,21 @@ public final class IncomingMessageHandler {
             }
         }
 
-        var groupId = GroupUtils.getGroupId(groupContext);
-        var group = context.getGroupHelper().getGroup(groupId);
+        final var message = content.getDataMessage().orElse(null);
+
+        final var recipientId = account.getRecipientResolver().resolveRecipient(source);
+
+        final var groupId = GroupUtils.getGroupId(groupContext);
+        final var group = context.getGroupHelper().getGroup(groupId);
+
+        if (message != null && message.getAdminDelete().isPresent() && (group == null || !group.isAdmin(recipientId))) {
+            return true;
+        }
+
         if (group == null) {
             return false;
         }
 
-        final var message = content.getDataMessage().orElse(null);
-
-        final var recipientId = account.getRecipientResolver().resolveRecipient(source);
         if (!group.isMember(recipientId) && !(
                 group.isPendingMember(recipientId) && message != null && message.isGroupV2Update()
         )) {
@@ -733,13 +761,14 @@ public final class IncomingMessageHandler {
         return false;
     }
 
-    private List<HandleAction> handleSignalServiceDataMessage(
+    private Pair<List<HandleAction>, Map<String, String>> handleSignalServiceDataMessage(
             SignalServiceDataMessage message,
             boolean isSync,
             DeviceAddress source,
             DeviceAddress destination,
-            boolean ignoreAttachments
+            ReceiveConfig receiveConfig
     ) {
+        final var longTexts = new HashMap<String, String>();
         var actions = new ArrayList<HandleAction>();
         if (message.getGroupContext().isPresent()) {
             final var groupContext = message.getGroupContext().get();
@@ -755,7 +784,7 @@ public final class IncomingMessageHandler {
                                 groupV1 = new GroupInfoV1(groupId);
                             }
 
-                            if (groupInfo.getAvatar().isPresent()) {
+                            if (groupInfo.getAvatar().isPresent() && !receiveConfig.ignoreAvatars()) {
                                 var avatar = groupInfo.getAvatar().get();
                                 context.getGroupHelper().downloadGroupAvatar(groupV1.getGroupId(), avatar);
                             }
@@ -797,7 +826,7 @@ public final class IncomingMessageHandler {
                 }
             }
             if (groupContext.getGroupV2().isPresent()) {
-                handleGroupV2Context(groupContext.getGroupV2().get());
+                handleGroupV2Context(groupContext.getGroupV2().get(), receiveConfig.ignoreAvatars());
             }
         }
 
@@ -830,10 +859,21 @@ public final class IncomingMessageHandler {
                                 message.getExpireTimerVersion());
             }
         }
-        if (!ignoreAttachments) {
+        if (!receiveConfig.ignoreAttachments()) {
             if (message.getAttachments().isPresent()) {
                 for (var attachment : message.getAttachments().get()) {
                     context.getAttachmentHelper().downloadAttachment(attachment);
+                    if (attachment.isPointer()) {
+                        final var file = context.getAttachmentHelper().getAttachmentFile(attachment.asPointer());
+                        if (MimeUtils.LONG_TEXT.equals(attachment.getContentType()) && attachment.isPointer()) {
+                            try {
+                                final var longText = Files.readString(file.toPath());
+                                longTexts.put(attachment.asPointer().getRemoteId().toString(), longText);
+                            } catch (IOException e) {
+                                logger.warn("Failed to read long text attachment, ignoring", e);
+                            }
+                        }
+                    }
                 }
             }
             if (message.getSharedContacts().isPresent()) {
@@ -863,6 +903,21 @@ public final class IncomingMessageHandler {
                     }
                 }
             }
+        } else {
+            if (message.getAttachments().isPresent()) {
+                for (var attachment : message.getAttachments().get()) {
+                    if (MimeUtils.LONG_TEXT.equals(attachment.getContentType()) && attachment.isPointer()) {
+                        try {
+                            context.getAttachmentHelper().retrieveAttachment(attachment, in -> {
+                                final var longText = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+                                longTexts.put(attachment.asPointer().getRemoteId().toString(), longText);
+                            });
+                        } catch (IOException e) {
+                            logger.warn("Failed to download long text attachment, ignoring", e);
+                        }
+                    }
+                }
+            }
         }
         if (message.getGiftBadge().isPresent()) {
             handleIncomingGiftBadge(message.getGiftBadge().get());
@@ -878,9 +933,12 @@ public final class IncomingMessageHandler {
                 sticker = new StickerPack(stickerPackId, messageSticker.getPackKey());
                 account.getStickerStore().addStickerPack(sticker);
             }
-            context.getJobExecutor().enqueueJob(new RetrieveStickerPackJob(stickerPackId, messageSticker.getPackKey()));
+            if (!receiveConfig.ignoreStickers()) {
+                context.getJobExecutor()
+                        .enqueueJob(new RetrieveStickerPackJob(stickerPackId, messageSticker.getPackKey()));
+            }
         }
-        return actions;
+        return new Pair<>(actions, longTexts);
     }
 
     private void handleIncomingGiftBadge(final SignalServiceDataMessage.GiftBadge giftBadge) {
@@ -890,14 +948,14 @@ public final class IncomingMessageHandler {
     private List<HandleAction> handleSignalServiceStoryMessage(
             SignalServiceStoryMessage message,
             RecipientId source,
-            boolean ignoreAttachments
+            ReceiveConfig receiveConfig
     ) {
         var actions = new ArrayList<HandleAction>();
         if (message.getGroupContext().isPresent()) {
-            handleGroupV2Context(message.getGroupContext().get());
+            handleGroupV2Context(message.getGroupContext().get(), receiveConfig.ignoreAvatars());
         }
 
-        if (!ignoreAttachments) {
+        if (!receiveConfig.ignoreAttachments()) {
             if (message.getFileAttachment().isPresent()) {
                 context.getAttachmentHelper().downloadAttachment(message.getFileAttachment().get());
             }
@@ -919,13 +977,14 @@ public final class IncomingMessageHandler {
         return actions;
     }
 
-    private void handleGroupV2Context(final SignalServiceGroupV2 groupContext) {
+    private void handleGroupV2Context(final SignalServiceGroupV2 groupContext, final boolean ignoreAvatars) {
         final var groupMasterKey = groupContext.getMasterKey();
 
         context.getGroupHelper()
                 .getOrMigrateGroup(groupMasterKey,
                         groupContext.getRevision(),
-                        groupContext.hasSignedGroupChange() ? groupContext.getSignedGroupChange() : null);
+                        groupContext.hasSignedGroupChange() ? groupContext.getSignedGroupChange() : null,
+                        ignoreAvatars);
     }
 
     private void handleIncomingProfileKey(final byte[] profileKeyBytes, final RecipientId source) {

@@ -3,17 +3,17 @@ plugins {
     application
     eclipse
     `check-lib-versions`
-    id("org.graalvm.buildtools.native") version "0.11.4"
+    id("org.graalvm.buildtools.native") version "0.11.5"
 }
 
 allprojects {
     group = "org.asamk"
-    version = "0.13.23"
+    version = "0.14.1"
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
 
     if (!JavaVersion.current().isCompatibleWith(targetCompatibility)) {
         toolchain {
@@ -90,7 +90,6 @@ dependencies {
     implementation(libs.slf4j.api)
     implementation(libs.slf4j.jul)
     implementation(libs.logback)
-    implementation(libs.zxing.core)
     implementation(project(":libsignal-cli"))
 }
 

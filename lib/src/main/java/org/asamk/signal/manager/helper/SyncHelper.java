@@ -114,7 +114,7 @@ public class SyncHelper {
                     if (record instanceof GroupInfoV1 groupInfo) {
                         out.write(new DeviceGroup(groupInfo.getGroupId().serialize(),
                                 Optional.ofNullable(groupInfo.name),
-                                groupInfo.getMembers()
+                                groupInfo.getMemberRecipientIds()
                                         .stream()
                                         .map(context.getRecipientHelper()::resolveSignalServiceAddress)
                                         .toList(),
@@ -156,7 +156,7 @@ public class SyncHelper {
 
         try {
             try (OutputStream fos = new FileOutputStream(contactsFile)) {
-                var out = new DeviceContactsOutputStream(fos, false, true);
+                var out = new DeviceContactsOutputStream(fos, true, true);
                 for (var contactPair : account.getContactStore().getContacts()) {
                     final var recipientId = contactPair.first();
                     final var contact = contactPair.second();
@@ -293,7 +293,7 @@ public class SyncHelper {
         return context.getSendHelper().sendSyncMessage(SignalServiceSyncMessage.forConfiguration(configurationMessage));
     }
 
-    public void handleSyncDeviceGroups(final InputStream input) {
+    public void handleSyncDeviceGroups(final InputStream input, final boolean ignoreAvatars) {
         final var s = new DeviceGroupsInputStream(input);
         DeviceGroup g;
         while (true) {
@@ -326,7 +326,7 @@ public class SyncHelper {
                     syncGroup.color = g.getColor().get();
                 }
 
-                if (g.getAvatar().isPresent()) {
+                if (g.getAvatar().isPresent() && !ignoreAvatars) {
                     context.getGroupHelper().downloadGroupAvatar(syncGroup.getGroupId(), g.getAvatar().get());
                 }
                 syncGroup.archived = g.isArchived();
@@ -335,7 +335,7 @@ public class SyncHelper {
         }
     }
 
-    public void handleSyncDeviceContacts(final InputStream input) throws IOException {
+    public void handleSyncDeviceContacts(final InputStream input, final boolean ignoreAvatars) throws IOException {
         final var s = new DeviceContactsInputStream(input);
         DeviceContact c;
         while (true) {
@@ -381,7 +381,11 @@ public class SyncHelper {
             account.getContactStore().storeContact(recipientId, builder.build());
 
             if (c.getAvatar().isPresent()) {
-                storeContactAvatar(c.getAvatar().get(), address);
+                if (!ignoreAvatars) {
+                    storeContactAvatar(c.getAvatar().get(), address);
+                } else {
+                    IOUtils.discardStream(c.getAvatar().get().getInputStream());
+                }
             }
         }
     }

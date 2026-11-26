@@ -186,8 +186,8 @@ public final class StorageSyncValidations {
 
             if (insert.getProto().contact != null) {
                 final var contact = insert.getProto().contact;
-                final var aci = ACI.parseOrNull(contact.aci);
-                final var pni = PNI.parseOrNull(contact.pni);
+                final var aci = ACI.parseOrNull(contact.aci, contact.aciBinary);
+                final var pni = PNI.parseOrNull(contact.pni, contact.pniBinary);
                 final var number = contact.e164.isEmpty() ? null : contact.e164;
                 final var username = contact.username.isEmpty() ? null : contact.username;
                 final var address = new RecipientAddress(aci, pni, number, username);

@@ -37,10 +37,12 @@ public class Commands {
         addCommand(new RemoveDeviceCommand());
         addCommand(new RemovePinCommand());
         addCommand(new RemoteDeleteCommand());
+        addCommand(new SendAdminDeleteCommand());
         addCommand(new SendCommand());
         addCommand(new SendContactsCommand());
         addCommand(new SendMessageRequestResponseCommand());
         addCommand(new SendPaymentNotificationCommand());
+        addCommand(new SendPinMessageCommand());
         addCommand(new SendPollCreateCommand());
         addCommand(new SendPollVoteCommand());
         addCommand(new SendPollTerminateCommand());
@@ -48,6 +50,7 @@ public class Commands {
         addCommand(new SendReceiptCommand());
         addCommand(new SendSyncRequestCommand());
         addCommand(new SendTypingCommand());
+        addCommand(new SendUnpinMessageCommand());
         addCommand(new SetPinCommand());
         addCommand(new SubmitRateLimitChallengeCommand());
         addCommand(new StartChangeNumberCommand());

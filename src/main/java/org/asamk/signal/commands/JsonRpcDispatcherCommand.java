@@ -21,6 +21,7 @@ import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.nio.channels.Channels;
 import java.util.List;
+import java.util.SequencedCollection;
 import java.util.function.Supplier;
 
 import static org.asamk.signal.util.CommandUtil.getReceiveConfig;
@@ -43,6 +44,12 @@ public class JsonRpcDispatcherCommand implements LocalCommand, MultiLocalCommand
         subparser.addArgument("--ignore-stories")
                 .help("Don’t receive story messages from the server.")
                 .action(Arguments.storeTrue());
+        subparser.addArgument("--ignore-avatars")
+                .help("Don't download avatars of received messages.")
+                .action(Arguments.storeTrue());
+        subparser.addArgument("--ignore-stickers")
+                .help("Don't download sticker packs of received messages.")
+                .action(Arguments.storeTrue());
         subparser.addArgument("--send-read-receipts")
                 .help("Send read receipts for all incoming data messages (in addition to the default delivery receipts)")
                 .action(Arguments.storeTrue());
@@ -53,7 +60,7 @@ public class JsonRpcDispatcherCommand implements LocalCommand, MultiLocalCommand
     }
 
     @Override
-    public List<OutputType> getSupportedOutputTypes() {
+    public SequencedCollection<OutputType> getSupportedOutputTypes() {
         return List.of(OutputType.JSON);
     }
 

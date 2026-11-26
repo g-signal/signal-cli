@@ -211,18 +211,19 @@ public class StorageHelper {
                             remoteOnlyRecords.size());
                 }
 
-                if (!idDifference.localOnlyIds().isEmpty()) {
-                    final var updated = account.getRecipientStore()
-                            .removeStorageIdsFromLocalOnlyUnregisteredRecipients(connection,
-                                    idDifference.localOnlyIds());
-
-                    if (updated > 0) {
-                        logger.warn(
-                                "Found {} records that were deleted remotely but only marked unregistered locally. Removed those from local store.",
-                                updated);
-                    }
-                }
-
+                // This logic is wrong, records should only be deleted if they're deleted remotely, not if the remote record is updated
+//                if (!idDifference.localOnlyIds().isEmpty()) {
+//                    final var updated = account.getRecipientStore()
+//                            .removeStorageIdsFromLocalOnlyUnregisteredRecipients(connection,
+//                                    idDifference.localOnlyIds());
+//
+//                    if (updated > 0) {
+//                        logger.warn(
+//                                "Found {} records that were deleted remotely but only marked unregistered locally. Removed those from local store.",
+//                                updated);
+//                    }
+//                }
+//
                 final var unknownInserts = processKnownRecords(connection, remoteOnlyRecords);
                 final var unknownDeletes = idDifference.localOnlyIds()
                         .stream()

@@ -4,8 +4,8 @@ plugins {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
 
     if (!JavaVersion.current().isCompatibleWith(targetCompatibility)) {
         toolchain {
@@ -16,13 +16,16 @@ java {
 
 val libsignalClientPath = project.findProperty("libsignal_client_path")?.toString()
 
+configurations.all {
+    // Use the custom libsignal-client build instead of the official one pulled in by signal-service-java
+    exclude(group = "org.signal", module = "libsignal-client")
+}
+
 dependencies {
+    implementation(libs.signalservice)
     if (libsignalClientPath == null) {
-        implementation(libs.signalservice)
+        implementation(libs.libsignal.client)
     } else {
-        implementation(libs.signalservice) {
-            exclude(group = "org.signal", module = "libsignal-client")
-        }
         implementation(files(libsignalClientPath))
     }
     implementation(libs.jackson.databind)

@@ -99,6 +99,7 @@ public class LegacyRecipientStore2 {
                         expiringProfileKeyCredential,
                         profile,
                         null,
+                        null,
                         null);
             }).collect(Collectors.toMap(Recipient::getRecipientId, r -> r));
 

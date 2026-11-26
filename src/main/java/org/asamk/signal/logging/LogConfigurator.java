@@ -64,7 +64,9 @@ public class LogConfigurator extends ContextAwareBase implements Configurator {
             consoleAppender.addFilter(new Filter<>() {
                 @Override
                 public FilterReply decide(final ILoggingEvent event) {
-                    return !"LibSignal".equals(event.getLoggerName()) && (
+                    return !"LibSignal".equals(event.getLoggerName())
+                            && !"LibSignalService".equals(event.getLoggerName())
+                            && (
                             event.getLevel().isGreaterOrEqual(Level.WARN) || (
                                     event.getLevel().isGreaterOrEqual(Level.INFO) && event.getLoggerName()
                                             .startsWith("org.asamk")

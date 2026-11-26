@@ -157,7 +157,7 @@ public class ManagerImpl implements Manager {
     private final SignalDependencies dependencies;
     private final Context context;
 
-    private final ExecutorService executor = Executors.newCachedThreadPool();
+    private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
     private Thread receiveThread;
     private boolean isReceivingSynchronous;
@@ -633,7 +633,9 @@ public class ManagerImpl implements Manager {
                         updateGroup.getEditDetailsPermission(),
                         updateGroup.getAvatarFile(),
                         updateGroup.getExpirationTimer(),
-                        updateGroup.getIsAnnouncementGroup());
+                        updateGroup.getIsAnnouncementGroup(),
+                        updateGroup.getLabelEmoji(),
+                        updateGroup.getLabelString());
     }
 
     @Override
@@ -666,14 +668,15 @@ public class ManagerImpl implements Manager {
             Set<RecipientIdentifier> recipients,
             boolean notifySelf
     ) throws IOException, NotAGroupMemberException, GroupNotFoundException, GroupSendingNotAllowedException {
-        return sendMessage(messageBuilder, recipients, notifySelf, Optional.empty());
+        return sendMessage(messageBuilder, recipients, notifySelf, Optional.empty(), true);
     }
 
     private SendMessageResults sendMessage(
             SignalServiceDataMessage.Builder messageBuilder,
             Set<RecipientIdentifier> recipients,
             boolean notifySelf,
-            Optional<Long> editTargetTimestamp
+            Optional<Long> editTargetTimestamp,
+            boolean urgent
     ) throws IOException, NotAGroupMemberException, GroupNotFoundException, GroupSendingNotAllowedException {
         var results = new HashMap<RecipientIdentifier, List<SendMessageResult>>();
         long timestamp = getNextMessageTimestamp();
@@ -685,14 +688,14 @@ public class ManagerImpl implements Manager {
             )) {
                 final var result = notifySelf
                         ? context.getSendHelper()
-                        .sendMessage(messageBuilder, account.getSelfRecipientId(), editTargetTimestamp)
+                        .sendMessage(messageBuilder, account.getSelfRecipientId(), editTargetTimestamp, urgent)
                         : context.getSendHelper().sendSelfMessage(messageBuilder, editTargetTimestamp);
                 results.put(recipient, List.of(toSendMessageResult(result)));
             } else if (recipient instanceof RecipientIdentifier.Single single) {
                 try {
                     final var recipientId = context.getRecipientHelper().resolveRecipient(single);
                     final var result = context.getSendHelper()
-                            .sendMessage(messageBuilder, recipientId, editTargetTimestamp);
+                            .sendMessage(messageBuilder, recipientId, editTargetTimestamp, urgent);
                     results.put(recipient, List.of(toSendMessageResult(result)));
                 } catch (UnregisteredRecipientException e) {
                     results.put(recipient,
@@ -700,7 +703,7 @@ public class ManagerImpl implements Manager {
                 }
             } else if (recipient instanceof RecipientIdentifier.Group group) {
                 final var result = context.getSendHelper()
-                        .sendAsGroupMessage(messageBuilder, group.groupId(), notifySelf, editTargetTimestamp);
+                        .sendAsGroupMessage(messageBuilder, group.groupId(), notifySelf, editTargetTimestamp, urgent);
                 results.put(recipient, result.stream().map(this::toSendMessageResult).toList());
             }
         }
@@ -799,7 +802,7 @@ public class ManagerImpl implements Manager {
         }
         final var messageBuilder = SignalServiceDataMessage.newBuilder();
         applyMessage(messageBuilder, message);
-        return sendMessage(messageBuilder, recipients, notifySelf);
+        return sendMessage(messageBuilder, recipients, notifySelf, Optional.empty(), message.urgent());
     }
 
     @Override
@@ -810,7 +813,7 @@ public class ManagerImpl implements Manager {
     ) throws IOException, AttachmentInvalidException, NotAGroupMemberException, GroupNotFoundException, GroupSendingNotAllowedException, UnregisteredRecipientException, InvalidStickerException {
         final var messageBuilder = SignalServiceDataMessage.newBuilder();
         applyMessage(messageBuilder, message);
-        return sendMessage(messageBuilder, recipients, false, Optional.of(editTargetTimestamp));
+        return sendMessage(messageBuilder, recipients, false, Optional.of(editTargetTimestamp), message.urgent());
     }
 
     private void applyMessage(
@@ -985,6 +988,77 @@ public class ManagerImpl implements Manager {
                 .getServiceId();
         var reaction = new SignalServiceDataMessage.Reaction(emoji, remove, authorServiceId, targetSentTimestamp);
         final var messageBuilder = SignalServiceDataMessage.newBuilder().withReaction(reaction);
+        if (isStory) {
+            messageBuilder.withStoryContext(new SignalServiceDataMessage.StoryContext(authorServiceId,
+                    targetSentTimestamp));
+        }
+        return sendMessage(messageBuilder, recipients, notifySelf);
+    }
+
+    @Override
+    public SendMessageResults sendAdminDelete(
+            RecipientIdentifier.Single targetAuthor,
+            long targetSentTimestamp,
+            Set<RecipientIdentifier.Group> recipients,
+            final boolean notifySelf,
+            final boolean isStory
+    ) throws IOException, NotAGroupMemberException, GroupNotFoundException, GroupSendingNotAllowedException, UnregisteredRecipientException {
+        final var targetAuthorRecipientId = context.getRecipientHelper().resolveRecipient(targetAuthor);
+        final var authorServiceId = context.getRecipientHelper()
+                .resolveSignalServiceAddress(targetAuthorRecipientId)
+                .getServiceId();
+        final var adminDelete = new SignalServiceDataMessage.AdminDelete(authorServiceId, targetSentTimestamp);
+        final var messageBuilder = SignalServiceDataMessage.newBuilder().withAdminDelete(adminDelete);
+        if (isStory) {
+            messageBuilder.withStoryContext(new SignalServiceDataMessage.StoryContext(authorServiceId,
+                    targetSentTimestamp));
+        }
+        return sendMessage(messageBuilder,
+                recipients.stream().map(r -> (RecipientIdentifier) r).collect(Collectors.toSet()),
+                notifySelf);
+    }
+
+    @Override
+    public SendMessageResults sendPinMessage(
+            int pinDuration,
+            RecipientIdentifier.Single targetAuthor,
+            long targetSentTimestamp,
+            Set<RecipientIdentifier> recipients,
+            final boolean notifySelf,
+            final boolean isStory
+    ) throws IOException, NotAGroupMemberException, GroupNotFoundException, GroupSendingNotAllowedException, UnregisteredRecipientException {
+        final var targetAuthorRecipientId = context.getRecipientHelper().resolveRecipient(targetAuthor);
+        final var authorServiceId = context.getRecipientHelper()
+                .resolveSignalServiceAddress(targetAuthorRecipientId)
+                .getServiceId();
+        final var duration = pinDuration >= 0 ? pinDuration : null;
+        final var forever = pinDuration < 0;
+        final var pinnedMessage = new SignalServiceDataMessage.PinnedMessage(authorServiceId,
+                targetSentTimestamp,
+                duration,
+                forever);
+        final var messageBuilder = SignalServiceDataMessage.newBuilder().withPinnedMessage(pinnedMessage);
+        if (isStory) {
+            messageBuilder.withStoryContext(new SignalServiceDataMessage.StoryContext(authorServiceId,
+                    targetSentTimestamp));
+        }
+        return sendMessage(messageBuilder, recipients, notifySelf);
+    }
+
+    @Override
+    public SendMessageResults sendUnpinMessage(
+            RecipientIdentifier.Single targetAuthor,
+            long targetSentTimestamp,
+            Set<RecipientIdentifier> recipients,
+            final boolean notifySelf,
+            final boolean isStory
+    ) throws IOException, NotAGroupMemberException, GroupNotFoundException, GroupSendingNotAllowedException, UnregisteredRecipientException {
+        final var targetAuthorRecipientId = context.getRecipientHelper().resolveRecipient(targetAuthor);
+        final var authorServiceId = context.getRecipientHelper()
+                .resolveSignalServiceAddress(targetAuthorRecipientId)
+                .getServiceId();
+        final var unpinnedMessage = new SignalServiceDataMessage.UnpinnedMessage(authorServiceId, targetSentTimestamp);
+        final var messageBuilder = SignalServiceDataMessage.newBuilder().withUnpinnedMessage(unpinnedMessage);
         if (isStory) {
             messageBuilder.withStoryContext(new SignalServiceDataMessage.StoryContext(authorServiceId,
                     targetSentTimestamp));
@@ -1479,7 +1553,21 @@ public class ManagerImpl implements Manager {
             return List.of();
         }
         // refresh profiles of explicitly given recipients
-        context.getProfileHelper().refreshRecipientProfiles(recipientIds);
+        if (recipientIds.isEmpty()) {
+            final var rIds = account.getRecipientStore()
+                    .getRecipients(onlyContacts, blocked, recipientIds, name)
+                    .stream()
+                    .filter(r -> r.isRegistered())
+                    .map(r -> r.getRecipientId())
+                    .toList();
+            try {
+                context.getProfileHelper().getRecipientProfiles(rIds);
+            } catch (Exception e) {
+                logger.warn("Failed to refresh profiles for recipients", e);
+            }
+        } else {
+            context.getProfileHelper().refreshRecipientProfiles(recipientIds);
+        }
         return account.getRecipientStore()
                 .getRecipients(onlyContacts, blocked, recipientIds, name)
                 .stream()

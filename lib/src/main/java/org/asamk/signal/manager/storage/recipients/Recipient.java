@@ -23,6 +23,8 @@ public class Recipient {
 
     private final Boolean discoverable;
 
+    private final Long unregisteredTimestamp;
+
     private final byte[] storageRecord;
 
     public Recipient(
@@ -33,6 +35,7 @@ public class Recipient {
             final ExpiringProfileKeyCredential expiringProfileKeyCredential,
             final Profile profile,
             final Boolean discoverable,
+            final Long unregisteredTimestamp,
             final byte[] storageRecord
     ) {
         this.recipientId = recipientId;
@@ -42,6 +45,7 @@ public class Recipient {
         this.expiringProfileKeyCredential = expiringProfileKeyCredential;
         this.profile = profile;
         this.discoverable = discoverable;
+        this.unregisteredTimestamp = unregisteredTimestamp;
         this.storageRecord = storageRecord;
     }
 
@@ -53,6 +57,7 @@ public class Recipient {
         expiringProfileKeyCredential = builder.expiringProfileKeyCredential;
         profile = builder.profile;
         discoverable = builder.discoverable;
+        unregisteredTimestamp = builder.unregisteredTimestamp;
         storageRecord = builder.storageRecord;
     }
 
@@ -100,6 +105,14 @@ public class Recipient {
         return discoverable;
     }
 
+    public Long getUnregisteredTimestamp() {
+        return unregisteredTimestamp;
+    }
+
+    public boolean isRegistered() {
+        return unregisteredTimestamp == null;
+    }
+
     public byte[] getStorageRecord() {
         return storageRecord;
     }
@@ -131,6 +144,7 @@ public class Recipient {
         private ExpiringProfileKeyCredential expiringProfileKeyCredential;
         private Profile profile;
         private Boolean discoverable;
+        private Long unregisteredTimestamp;
         private byte[] storageRecord;
 
         private Builder() {
@@ -168,6 +182,11 @@ public class Recipient {
 
         public Builder withDiscoverable(final Boolean val) {
             discoverable = val;
+            return this;
+        }
+
+        public Builder withUnregisteredTimestamp(final Long val) {
+            unregisteredTimestamp = val;
             return this;
         }
 

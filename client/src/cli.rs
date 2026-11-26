@@ -10,6 +10,9 @@ pub struct Cli {
     #[arg(short = 'a', long)]
     pub account: Option<String>,
 
+    #[arg(long)]
+    pub output: Option<String>,
+
     /// TCP host and port of signal-cli daemon
     #[arg(long, conflicts_with = "json_rpc_http")]
     pub json_rpc_tcp: Option<Option<SocketAddr>>,
@@ -94,7 +97,7 @@ pub enum CliCommands {
     },
     Link {
         #[arg(short = 'n', long)]
-        name: String,
+        name: Option<String>,
     },
     ListAccounts,
     ListContacts {
@@ -105,6 +108,10 @@ pub enum CliCommands {
         blocked: Option<bool>,
         #[arg(long)]
         name: Option<String>,
+        #[arg(long)]
+        detailed: bool,
+        #[arg(long)]
+        internal: bool,
     },
     ListDevices,
     ListGroups {
@@ -135,6 +142,8 @@ pub enum CliCommands {
         voice: bool,
         #[arg(long)]
         captcha: Option<String>,
+        #[arg(long)]
+        reregister: bool,
     },
     RemoveContact {
         recipient: String,
@@ -167,14 +176,23 @@ pub enum CliCommands {
         #[arg(short = 'g', long)]
         group_id: Vec<String>,
 
+        #[arg(short = 'u', long = "username")]
+        username: Vec<String>,
+
         #[arg(long)]
         note_to_self: bool,
+
+        #[arg(long)]
+        notify_self: bool,
 
         #[arg(short = 'e', long)]
         end_session: bool,
 
         #[arg(short = 'm', long)]
         message: Option<String>,
+
+        #[arg(long)]
+        message_from_stdin: bool,
 
         #[arg(short = 'a', long)]
         attachment: Vec<String>,
@@ -229,6 +247,25 @@ pub enum CliCommands {
 
         #[arg(long)]
         edit_timestamp: Option<u64>,
+
+        #[arg(long = "no-urgent")]
+        no_urgent: bool,
+    },
+    SendAdminDelete {
+        #[arg(short = 'g', long = "group-id")]
+        group_id: Vec<String>,
+
+        #[arg(short = 'a', long = "target-author")]
+        target_author: String,
+
+        #[arg(short = 't', long = "target-timestamp")]
+        target_timestamp: u64,
+
+        #[arg(long)]
+        story: bool,
+
+        #[arg(long)]
+        notify_self: bool,
     },
     SendContacts,
     SendPaymentNotification {
@@ -240,14 +277,116 @@ pub enum CliCommands {
         #[arg(long)]
         note: String,
     },
+    SendPinMessage {
+        recipient: Vec<String>,
+
+        #[arg(short = 'g', long = "group-id")]
+        group_id: Vec<String>,
+
+        #[arg(short = 'u', long = "username")]
+        username: Vec<String>,
+
+        #[arg(short = 'a', long = "target-author")]
+        target_author: String,
+
+        #[arg(short = 't', long = "target-timestamp")]
+        target_timestamp: u64,
+
+        #[arg(short = 'd', long = "pin-duration")]
+        pin_duration: Option<i32>,
+
+        #[arg(long = "note-to-self")]
+        note_to_self: bool,
+
+        #[arg(long)]
+        notify_self: bool,
+
+        #[arg(long)]
+        story: bool,
+    },
+    SendPollCreate {
+        recipient: Vec<String>,
+
+        #[arg(short = 'g', long = "group-id")]
+        group_id: Vec<String>,
+
+        #[arg(short = 'u', long = "username")]
+        username: Vec<String>,
+
+        #[arg(short = 'q', long = "question")]
+        question: String,
+
+        #[arg(short = 'o', long = "option")]
+        option: Vec<String>,
+
+        #[arg(long = "no-multi")]
+        no_multi: bool,
+
+        #[arg(long = "note-to-self")]
+        note_to_self: bool,
+
+        #[arg(long)]
+        notify_self: bool,
+    },
+    SendPollTerminate {
+        recipient: Vec<String>,
+
+        #[arg(short = 'g', long = "group-id")]
+        group_id: Vec<String>,
+
+        #[arg(short = 'u', long = "username")]
+        username: Vec<String>,
+
+        #[arg(long = "poll-timestamp")]
+        poll_timestamp: u64,
+
+        #[arg(long = "note-to-self")]
+        note_to_self: bool,
+
+        #[arg(long)]
+        notify_self: bool,
+    },
+    SendPollVote {
+        recipient: Vec<String>,
+
+        #[arg(short = 'g', long = "group-id")]
+        group_id: Vec<String>,
+
+        #[arg(short = 'u', long = "username")]
+        username: Vec<String>,
+
+        #[arg(long = "poll-author")]
+        poll_author: Option<String>,
+
+        #[arg(long = "poll-timestamp")]
+        poll_timestamp: u64,
+
+        #[arg(short = 'o', long = "option")]
+        option: Vec<i32>,
+
+        #[arg(long = "vote-count")]
+        vote_count: i32,
+
+        #[arg(long = "note-to-self")]
+        note_to_self: bool,
+
+        #[arg(long)]
+        notify_self: bool,
+    },
     SendReaction {
         recipient: Vec<String>,
 
         #[arg(short = 'g', long = "group-id")]
         group_id: Vec<String>,
 
+        #[arg(short = 'u', long = "username")]
+        username: Vec<String>,
+
         #[arg(long = "note-to-self")]
         note_to_self: bool,
+
+        #[arg(long)]
+        notify_self: bool,
 
         #[arg(short = 'e', long)]
         emoji: String,
@@ -267,6 +406,9 @@ pub enum CliCommands {
     SendReceipt {
         recipient: String,
 
+        #[arg(short = 'u', long = "username")]
+        username: Vec<String>,
+
         #[arg(short = 't', long = "target-timestamp")]
         target_timestamp: Vec<u64>,
 
@@ -283,12 +425,37 @@ pub enum CliCommands {
         #[arg(short = 's', long)]
         stop: bool,
     },
+    SendUnpinMessage {
+        recipient: Vec<String>,
+
+        #[arg(short = 'g', long = "group-id")]
+        group_id: Vec<String>,
+
+        #[arg(short = 'u', long = "username")]
+        username: Vec<String>,
+
+        #[arg(short = 'a', long = "target-author")]
+        target_author: String,
+
+        #[arg(short = 't', long = "target-timestamp")]
+        target_timestamp: u64,
+
+        #[arg(long = "note-to-self")]
+        note_to_self: bool,
+
+        #[arg(long)]
+        notify_self: bool,
+
+        #[arg(long)]
+        story: bool,
+    },
     SendMessageRequestResponse {
         recipient: Vec<String>,
 
         #[arg(short = 'g', long = "group-id")]
         group_id: Vec<String>,
 
+        #[arg(long)]
         r#type: MessageRequestResponseType,
     },
     SetPin {
@@ -334,6 +501,10 @@ pub enum CliCommands {
         discoverable_by_number: Option<bool>,
         #[arg(long = "number-sharing")]
         number_sharing: Option<bool>,
+        #[arg(short = 'u', long = "username")]
+        username: Option<String>,
+        #[arg(long = "delete-username")]
+        delete_username: bool,
     },
     UpdateConfiguration {
         #[arg(long = "read-receipts")]
@@ -356,6 +527,28 @@ pub enum CliCommands {
 
         #[arg(short = 'n', long)]
         name: Option<String>,
+
+        #[arg(long = "given-name")]
+        given_name: Option<String>,
+
+        #[arg(long = "family-name")]
+        family_name: Option<String>,
+
+        #[arg(long = "nick-given-name")]
+        nick_given_name: Option<String>,
+
+        #[arg(long = "nick-family-name")]
+        nick_family_name: Option<String>,
+
+        #[arg(long)]
+        note: Option<String>,
+    },
+    UpdateDevice {
+        #[arg(short = 'd', long = "device-id")]
+        device_id: u32,
+
+        #[arg(short = 'n', long = "device-name")]
+        device_name: String,
     },
     UpdateGroup {
         #[arg(short = 'g', long = "group-id")]
@@ -405,6 +598,12 @@ pub enum CliCommands {
 
         #[arg(short = 'e', long)]
         expiration: Option<u32>,
+
+        #[arg(long = "member-label-emoji")]
+        member_label_emoji: Option<String>,
+
+        #[arg(long = "member-label")]
+        member_label: Option<String>,
     },
     UpdateProfile {
         #[arg(long = "given-name")]
