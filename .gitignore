@@ -13,3 +13,6 @@ out/
 .DS_Store
 /bin/
 /test-config/
+.gradle-home/
+.gradle
+build
